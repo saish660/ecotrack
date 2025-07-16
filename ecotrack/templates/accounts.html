@@ -23,6 +23,7 @@
         </div>
       </div>
       <form class="auth-form active" id="login-form" autocomplete="off">
+          {% csrf_token %}
         <div class="form-group">
           <label for="login-email">Email</label>
           <input
@@ -98,5 +99,6 @@
           .classList.toggle("active", tab === "signup");
       }
     </script>
+  <script src="{% static 'accounts.js' %}"></script>
   </body>
 </html>

@@ -13,6 +13,7 @@ class User(AbstractUser):
     carbon_footprint = models.FloatField(default=0)
     habits = models.JSONField(default=get_default_dict)
     user_data = models.JSONField(default=get_default_dict)
+    survey_answered = models.BooleanField(default=False)
 
     # By inheriting from AbstractUser, you get these fields automatically:
     # username

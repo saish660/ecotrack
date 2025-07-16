@@ -29,6 +29,7 @@ ALLOWED_HOSTS = []
 
 AUTH_USER_MODEL = 'ecotrack.User'
 
+LOGIN_URL = 'accounts'
 
 # Application definition
 
