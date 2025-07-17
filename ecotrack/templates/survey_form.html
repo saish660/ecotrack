@@ -18,27 +18,28 @@
 <header class="app-header">
     <h1>EcoTrack</h1>
 </header>
+<div class="questionnaire-progress" id="sticky-progress">
+    <div class="progress-bar">
+        <div class="progress-fill" id="survey-progress"></div>
+    </div>
+    <span class="progress-text" id="survey-progress-text"
+    >0/5 questions answered</span
+    >
+</div>
 <main>
     <!-- Survey Tab -->
     <section id="survey" class="tab-content active">
         <div class="card">
             <h2 class="card-title">EcoTrack User Survey</h2>
-            <div class="questionnaire-progress sticky-progress">
-                <div class="progress-bar">
-                    <div class="progress-fill" id="survey-progress"></div>
-                </div>
-                <span class="progress-text" id="survey-progress-text"
-                >0/5 questions answered</span
-                >
-            </div>
-            <form id="survey-form" class="daily-questionnaire-form" novalidate>
+
+            <form id="survey-form" class="daily-questionnaire-form">
                 <!-- HOUSEHOLD & HOME ENERGY -->
                 <div class="questionnaire-item">
                     <p class="question-text">
                         How many people are in your household?
                     </p>
                     <div class="form-element">
-                        <input type="number" name="household_size" min="1" required/>
+                        <input type="number" name="how_many_people_are_in_your_household" min="1" required/>
                     </div>
                 </div>
                 <div class="questionnaire-item">
@@ -47,7 +48,7 @@
                         <label class="option-card"
                         ><input
                                 type="radio"
-                                name="home_type"
+                                name="what_type_of_home_do_you_live_in"
                                 value="Apartment"
                                 required
                         />
@@ -59,7 +60,7 @@
                         <label class="option-card"
                         ><input
                                 type="radio"
-                                name="home_type"
+                                name="what_type_of_home_do_you_live_in"
                                 value="Detached House"
                         />
                             <div class="option-content">
@@ -70,7 +71,7 @@
                         <label class="option-card"
                         ><input
                                 type="radio"
-                                name="home_type"
+                                name="what_type_of_home_do_you_live_in"
                                 value="Semi-detached House"
                         />
                             <div class="option-content">
@@ -79,7 +80,7 @@
                         </label
                         >
                         <label class="option-card"
-                        ><input type="radio" name="home_type" value="Other"/>
+                        ><input type="radio" name="what_type_of_home_do_you_live_in" value="Other"/>
                             <div class="option-content"><span>Other</span></div>
                         </label
                         >
@@ -91,7 +92,7 @@
                         <label class="option-card"
                         ><input
                                 type="radio"
-                                name="home_size"
+                                name="what_is_the_size_of_your_home"
                                 value="Small"
                                 required
                         />
@@ -99,12 +100,12 @@
                         </label
                         >
                         <label class="option-card"
-                        ><input type="radio" name="home_size" value="Medium"/>
+                        ><input type="radio" name="what_is_the_size_of_your_home" value="Medium"/>
                             <div class="option-content"><span>Medium</span></div>
                         </label
                         >
                         <label class="option-card"
-                        ><input type="radio" name="home_size" value="Large"/>
+                        ><input type="radio" name="what_is_the_size_of_your_home" value="Large"/>
                             <div class="option-content"><span>Large</span></div>
                         </label
                         >
@@ -117,7 +118,7 @@
                     <div class="form-element">
                         <input
                                 type="number"
-                                name="electricity_kwh"
+                                name="how_much_electricity_does_your_household_use_per_month"
                                 min="0"
                                 placeholder="kWh"
                                 required
@@ -132,7 +133,7 @@
                         <label class="option-card"
                         ><input
                                 type="radio"
-                                name="renewable_electricity"
+                                name="is_your_electricity_from_renewable_sources"
                                 value="Yes"
                                 required
                         />
@@ -142,7 +143,7 @@
                         <label class="option-card"
                         ><input
                                 type="radio"
-                                name="renewable_electricity"
+                                name="is_your_electricity_from_renewable_sources"
                                 value="Partially"
                         />
                             <div class="option-content">
@@ -153,7 +154,7 @@
                         <label class="option-card"
                         ><input
                                 type="radio"
-                                name="renewable_electricity"
+                                name="is_your_electricity_from_renewable_sources"
                                 value="No"
                         />
                             <div class="option-content"><span>No</span></div>
@@ -167,7 +168,7 @@
                         <label class="option-card"
                         ><input
                                 type="radio"
-                                name="heating_source"
+                                name="what_is_your_primary_heating_source"
                                 value="Natural Gas"
                                 required
                         />
@@ -179,7 +180,7 @@
                         <label class="option-card"
                         ><input
                                 type="radio"
-                                name="heating_source"
+                                name="what_is_your_primary_heating_source"
                                 value="Electricity"
                         />
                             <div class="option-content">
@@ -188,22 +189,22 @@
                         </label
                         >
                         <label class="option-card"
-                        ><input type="radio" name="heating_source" value="Oil"/>
+                        ><input type="radio" name="what_is_your_primary_heating_source" value="Oil"/>
                             <div class="option-content"><span>Oil</span></div>
                         </label
                         >
                         <label class="option-card"
-                        ><input type="radio" name="heating_source" value="Propane"/>
+                        ><input type="radio" name="what_is_your_primary_heating_source" value="Propane"/>
                             <div class="option-content"><span>Propane</span></div>
                         </label
                         >
                         <label class="option-card"
-                        ><input type="radio" name="heating_source" value="Wood"/>
+                        ><input type="radio" name="what_is_your_primary_heating_source" value="Wood"/>
                             <div class="option-content"><span>Wood</span></div>
                         </label
                         >
                         <label class="option-card"
-                        ><input type="radio" name="heating_source" value="Other"/>
+                        ><input type="radio" name="what_is_your_primary_heating_source" value="Other"/>
                             <div class="option-content"><span>Other</span></div>
                         </label
                         >
@@ -211,13 +212,12 @@
                 </div>
                 <div class="questionnaire-item">
                     <p class="question-text">
-                        How much do you spend on heating per month (or kWh/gallons
-                        used)?
+                        What percentage of your monthly electricity consumption do you think is used for heating?
                     </p>
                     <div class="form-element">
                         <input
                                 type="number"
-                                name="heating_usage"
+                                name="what_percentage_of_your_monthly_electricity_consumption_do_you_think_is_used_for_heating"
                                 min="0"
                                 placeholder="kWh/gallons or $"
                                 required
@@ -232,7 +232,7 @@
                         <label class="option-card"
                         ><input
                                 type="radio"
-                                name="energy_saving"
+                                name="do_you_use_energy_saving_appliances_or_lightbulbs"
                                 value="Yes"
                                 required
                         />
@@ -240,7 +240,7 @@
                         </label
                         >
                         <label class="option-card"
-                        ><input type="radio" name="energy_saving" value="No"/>
+                        ><input type="radio" name="do_you_use_energy_saving_appliances_or_lightbulbs" value="No"/>
                             <div class="option-content"><span>No</span></div>
                         </label
                         >
@@ -254,13 +254,14 @@
                     <div class="form-element">
                         <input
                                 type="number"
-                                name="vehicle_count"
+                                name="how_many_vehicles_are_in_your_household"
                                 min="0"
-                                max="5"
+                                max="20"
                                 required
                         />
                     </div>
                 </div>
+
                 <!-- Vehicle sub-questions will be inserted here by JS -->
                 <div class="questionnaire-item">
                     <p class="question-text">
@@ -270,7 +271,7 @@
                         <label class="option-card"
                         ><input
                                 type="radio"
-                                name="public_transport_freq"
+                                name="how_often_do_you_use_public_transport"
                                 value="Daily"
                                 required
                         />
@@ -280,7 +281,7 @@
                         <label class="option-card"
                         ><input
                                 type="radio"
-                                name="public_transport_freq"
+                                name="how_often_do_you_use_public_transport"
                                 value="Weekly"
                         />
                             <div class="option-content"><span>Weekly</span></div>
@@ -289,7 +290,7 @@
                         <label class="option-card"
                         ><input
                                 type="radio"
-                                name="public_transport_freq"
+                                name="how_often_do_you_use_public_transport"
                                 value="Rarely"
                         />
                             <div class="option-content"><span>Rarely</span></div>
@@ -298,7 +299,7 @@
                         <label class="option-card"
                         ><input
                                 type="radio"
-                                name="public_transport_freq"
+                                name="how_often_do_you_use_public_transport"
                                 value="Never"
                         />
                             <div class="option-content"><span>Never</span></div>
@@ -306,21 +307,31 @@
                         >
                     </div>
                 </div>
-                <div
-                        class="questionnaire-item"
-                        id="public-transport-details"
-                        style="display: none"
-                >
+                <div class="questionnaire-item" id="public-transport-details" style="display: none">
                     <p class="question-text">
-                        Estimate your total annual public transport mileage
-                        (bus/train/subway, in km):
+                        How much distance do you commute in public transport per week on average? (in km)
                     </p>
                     <div class="form-element">
                         <input
                                 type="number"
-                                name="public_transport_miles"
+                                name="how_much_distance_do_you_commute_in_public_transport_per_week_on_average"
                                 min="0"
-                                placeholder="km/year"
+                                max="10000"
+                                required
+                        />
+                    </div>
+                </div>
+                <div class="questionnaire-item">
+                    <p class="question-text">
+                        How much distance do you commute in your car per week on average? (in km)
+                    </p>
+                    <div class="form-element">
+                        <input
+                                type="number"
+                                name="how_much_distance_do_you_commute_in_public_transport_per_week_on_average"
+                                min="0"
+                                max="10000"
+                                required
                         />
                     </div>
                 </div>
@@ -331,7 +342,7 @@
                     <div class="form-element">
                         <input
                                 type="number"
-                                name="flight_count"
+                                name="how_many_flights_have_you_taken_in_the_past_year"
                                 min="0"
                                 max="20"
                                 required
@@ -353,7 +364,7 @@
                         <label class="option-card"
                         ><input
                                 type="radio"
-                                name="diet_type"
+                                name="what_best_describes_your_diet"
                                 value="Vegan"
                                 required
                         />
@@ -361,26 +372,26 @@
                         </label
                         >
                         <label class="option-card"
-                        ><input type="radio" name="diet_type" value="Vegetarian"/>
+                        ><input type="radio" name="what_best_describes_your_diet" value="Vegetarian"/>
                             <div class="option-content">
                                 <span>Vegetarian</span>
                             </div>
                         </label
                         >
                         <label class="option-card"
-                        ><input type="radio" name="diet_type" value="Pescatarian"/>
+                        ><input type="radio" name="what_best_describes_your_diet" value="Pescatarian"/>
                             <div class="option-content">
                                 <span>Pescatarian</span>
                             </div>
                         </label
                         >
                         <label class="option-card"
-                        ><input type="radio" name="diet_type" value="Omnivore"/>
+                        ><input type="radio" name="what_best_describes_your_diet" value="Omnivore"/>
                             <div class="option-content"><span>Omnivore</span></div>
                         </label
                         >
                         <label class="option-card"
-                        ><input type="radio" name="diet_type" value="High Meat"/>
+                        ><input type="radio" name="what_best_describes_your_diet" value="High Meat"/>
                             <div class="option-content">
                                 <span>High Meat</span>
                             </div>
@@ -396,7 +407,7 @@
                         <label class="option-card"
                         ><input
                                 type="radio"
-                                name="organic_local"
+                                name="how_much_of_your_food_is_organic_local"
                                 value="None"
                                 required
                         />
@@ -404,17 +415,17 @@
                         </label
                         >
                         <label class="option-card"
-                        ><input type="radio" name="organic_local" value="Some"/>
+                        ><input type="radio" name="how_much_of_your_food_is_organic_local" value="Some"/>
                             <div class="option-content"><span>Some</span></div>
                         </label
                         >
                         <label class="option-card"
-                        ><input type="radio" name="organic_local" value="Most"/>
+                        ><input type="radio" name="how_much_of_your_food_is_organic_local" value="Most"/>
                             <div class="option-content"><span>Most</span></div>
                         </label
                         >
                         <label class="option-card"
-                        ><input type="radio" name="organic_local" value="All"/>
+                        ><input type="radio" name="how_much_of_your_food_is_organic_local" value="All"/>
                             <div class="option-content"><span>All</span></div>
                         </label
                         >
@@ -426,7 +437,7 @@
                         <label class="option-card"
                         ><input
                                 type="radio"
-                                name="food_waste"
+                                name="how_much_food_do_you_waste"
                                 value="Above average"
                                 required
                         />
@@ -436,14 +447,14 @@
                         </label
                         >
                         <label class="option-card"
-                        ><input type="radio" name="food_waste" value="Average"/>
+                        ><input type="radio" name="how_much_food_do_you_waste" value="Average"/>
                             <div class="option-content"><span>Average</span></div>
                         </label
                         >
                         <label class="option-card"
                         ><input
                                 type="radio"
-                                name="food_waste"
+                                name="how_much_food_do_you_waste"
                                 value="Below average"
                         />
                             <div class="option-content">
@@ -452,7 +463,7 @@
                         </label
                         >
                         <label class="option-card"
-                        ><input type="radio" name="food_waste" value="Very little"/>
+                        ><input type="radio" name="how_much_food_do_you_waste" value="Very little"/>
                             <div class="option-content">
                                 <span>Very little</span>
                             </div>
@@ -468,7 +479,7 @@
                         <label class="option-card"
                         ><input
                                 type="radio"
-                                name="food_packaged"
+                                name="how_much_of_your_food_is_packaged_processed"
                                 value="Above average"
                                 required
                         />
@@ -478,14 +489,14 @@
                         </label
                         >
                         <label class="option-card"
-                        ><input type="radio" name="food_packaged" value="Average"/>
+                        ><input type="radio" name="how_much_of_your_food_is_packaged_processed" value="Average"/>
                             <div class="option-content"><span>Average</span></div>
                         </label
                         >
                         <label class="option-card"
                         ><input
                                 type="radio"
-                                name="food_packaged"
+                                name="how_much_of_your_food_is_packaged_processed"
                                 value="Below average"
                         />
                             <div class="option-content">
@@ -496,7 +507,7 @@
                         <label class="option-card"
                         ><input
                                 type="radio"
-                                name="food_packaged"
+                                name="how_much_of_your_food_is_packaged_processed"
                                 value="Very little"
                         />
                             <div class="option-content">
@@ -510,17 +521,17 @@
                     <p class="question-text">Do you compost food waste?</p>
                     <div class="options-grid">
                         <label class="option-card"
-                        ><input type="radio" name="compost" value="None" required/>
+                        ><input type="radio" name="do_you_compost_food_waste" value="None" required/>
                             <div class="option-content"><span>None</span></div>
                         </label
                         >
                         <label class="option-card"
-                        ><input type="radio" name="compost" value="Some"/>
+                        ><input type="radio" name="do_you_compost_food_waste" value="Some"/>
                             <div class="option-content"><span>Some</span></div>
                         </label
                         >
                         <label class="option-card"
-                        ><input type="radio" name="compost" value="All"/>
+                        ><input type="radio" name="do_you_compost_food_waste" value="All"/>
                             <div class="option-content"><span>All</span></div>
                         </label
                         >
@@ -533,16 +544,19 @@
                     </p>
                     <div class="form-element">
                         <label
-                        ><input type="checkbox" name="recycle_paper"/> Paper</label
+                        ><input type="checkbox" name="do_you_recycle_the_following_check_all_that_apply_paper"/>
+                            Paper</label
                         >
                         <label
-                        ><input type="checkbox" name="recycle_glass"/> Glass</label
+                        ><input type="checkbox" name="do_you_recycle_the_following_check_all_that_apply_glass"/>
+                            Glass</label
                         >
                         <label
-                        ><input type="checkbox" name="recycle_metal"/> Metal</label
+                        ><input type="checkbox" name="do_you_recycle_the_following_check_all_that_apply_metal"/>
+                            Metal</label
                         >
                         <label
-                        ><input type="checkbox" name="recycle_plastic"/>
+                        ><input type="checkbox" name="do_you_recycle_the_following_check_all_that_apply_plastic"/>
                             Plastic</label
                         >
                     </div>
@@ -553,7 +567,7 @@
                         <label class="option-card"
                         ><input
                                 type="radio"
-                                name="waste_amount"
+                                name="how_much_waste_do_you_produce"
                                 value="Above average"
                                 required
                         />
@@ -563,14 +577,14 @@
                         </label
                         >
                         <label class="option-card"
-                        ><input type="radio" name="waste_amount" value="Average"/>
+                        ><input type="radio" name="how_much_waste_do_you_produce" value="Average"/>
                             <div class="option-content"><span>Average</span></div>
                         </label
                         >
                         <label class="option-card"
                         ><input
                                 type="radio"
-                                name="waste_amount"
+                                name="how_much_waste_do_you_produce"
                                 value="Below average"
                         />
                             <div class="option-content">
@@ -581,7 +595,7 @@
                         <label class="option-card"
                         ><input
                                 type="radio"
-                                name="waste_amount"
+                                name="how_much_waste_do_you_produce"
                                 value="Very little"
                         />
                             <div class="option-content">
@@ -600,7 +614,7 @@
                         <label class="option-card"
                         ><input
                                 type="radio"
-                                name="shopping_freq"
+                                name="how_often_do_you_buy_new_clothes_electronics_or_appliances"
                                 value="Often"
                                 required
                         />
@@ -608,14 +622,16 @@
                         </label
                         >
                         <label class="option-card"
-                        ><input type="radio" name="shopping_freq" value="Sometimes"/>
+                        ><input type="radio" name="how_often_do_you_buy_new_clothes_electronics_or_appliances"
+                                value="Sometimes"/>
                             <div class="option-content">
                                 <span>Sometimes</span>
                             </div>
                         </label
                         >
                         <label class="option-card"
-                        ><input type="radio" name="shopping_freq" value="Rarely"/>
+                        ><input type="radio" name="how_often_do_you_buy_new_clothes_electronics_or_appliances"
+                                value="Rarely"/>
                             <div class="option-content"><span>Rarely</span></div>
                         </label
                         >
@@ -629,7 +645,7 @@
                         <label class="option-card"
                         ><input
                                 type="radio"
-                                name="second_hand"
+                                name="do_you_buy_second_hand_or_repair_items"
                                 value="Yes"
                                 required
                         />
@@ -637,22 +653,42 @@
                         </label
                         >
                         <label class="option-card"
-                        ><input type="radio" name="second_hand" value="No"/>
+                        ><input type="radio" name="do_you_buy_second_hand_or_repair_items" value="No"/>
                             <div class="option-content"><span>No</span></div>
+                        </label
+                        >
+                        <label class="option-card"
+                        ><input
+                                type="radio"
+                                name="do_you_buy_second_hand_or_repair_items"
+                                value="Sometimes"
+                                required
+                        />
+                            <div class="option-content"><span>Sometimes</span></div>
+                        </label
+                        >
+                        <label class="option-card"
+                        ><input
+                                type="radio"
+                                name="do_you_buy_second_hand_or_repair_items"
+                                value="Rarely"
+                                required
+                        />
+                            <div class="option-content"><span>Rarely</span></div>
                         </label
                         >
                     </div>
                 </div>
                 <div class="questionnaire-item">
-                    <p class="question-text">Do you offset your carbon emissions?</p>
+                    <p class="question-text">Do you try to offset your carbon emissions?</p>
                     <div class="options-grid">
                         <label class="option-card"
-                        ><input type="radio" name="offset" value="Yes" required/>
+                        ><input type="radio" name="do_you_offset_your_carbon_emissions" value="Yes" required/>
                             <div class="option-content"><span>Yes</span></div>
                         </label
                         >
                         <label class="option-card"
-                        ><input type="radio" name="offset" value="No"/>
+                        ><input type="radio" name="do_you_offset_your_carbon_emissions" value="No"/>
                             <div class="option-content"><span>No</span></div>
                         </label
                         >
@@ -661,14 +697,14 @@
                 <!-- WATER USAGE -->
                 <div class="questionnaire-item">
                     <p class="question-text">
-                        How much water does your household use per month?
+                        How much water does your household use per month? (in litres)
                     </p>
                     <div class="form-element">
                         <input
                                 type="number"
-                                name="water_usage"
+                                name="how_much_water_does_your_household_use_per_month_in_litres"
                                 min="0"
-                                placeholder="liters or gallons"
+                                placeholder="liters"
                                 required
                         />
                     </div>
@@ -679,7 +715,7 @@
                         <label class="option-card"
                         ><input
                                 type="radio"
-                                name="water_saving"
+                                name="do_you_use_water_saving_devices"
                                 value="Yes"
                                 required
                         />
@@ -687,7 +723,7 @@
                         </label
                         >
                         <label class="option-card"
-                        ><input type="radio" name="water_saving" value="No"/>
+                        ><input type="radio" name="do_you_use_water_saving_devices" value="No"/>
                             <div class="option-content"><span>No</span></div>
                         </label
                         >
@@ -702,6 +738,7 @@
                     Submit Survey
                 </button>
             </form>
+
             <div id="survey-status-message" class="hidden">
                 <div class="completion-celebration">
                     <div class="celebration-icon">🎉</div>
@@ -724,9 +761,9 @@
         document
             .querySelectorAll(".vehicle-questionnaire")
             .forEach((el) => el.remove());
-        const count = parseInt(form.vehicle_count?.value || 0);
+        const count = parseInt(form.how_many_vehicles_are_in_your_household?.value || 0);
         const after = form
-            .querySelector('input[name="vehicle_count"]')
+            .querySelector('input[name="how_many_vehicles_are_in_your_household"]')
             .closest(".questionnaire-item");
         for (let i = 1; i <= count; i++) {
             const div = document.createElement("div");
@@ -736,16 +773,11 @@
             <div class="form-element">
               <label>Type:
                 <select name="vehicle_${i}_type" required>
-                  <option value="Gasoline">Gasoline</option>
+                  <option value="Petrol">Petrol</option>
                   <option value="Diesel">Diesel</option>
                   <option value="Hybrid">Hybrid</option>
                   <option value="Electric">Electric</option>
                 </select>
-              </label>
-            </div>
-            <div class="form-element">
-              <label>Fuel efficiency (mpg or kWh/100km):
-                <input type="number" name="vehicle_${i}_efficiency" min="0" required />
               </label>
             </div>
             <div class="form-element">
@@ -758,7 +790,7 @@
         }
     }
 
-    form.vehicle_count?.addEventListener("input", () => {
+    form.how_many_vehicles_are_in_your_household?.addEventListener("input", () => {
         renderVehicleQuestions();
         updateSurveyProgress();
     });
@@ -766,19 +798,20 @@
     // --- Dynamic public transport mileage ---
     function handlePublicTransportDetails() {
         const freq = form.querySelector(
-            'input[name="public_transport_freq"]:checked'
+            'input[name="how_often_do_you_use_public_transport"]:checked'
         );
         const details = document.getElementById("public-transport-details");
         if (freq && freq.value !== "Never" && freq.value !== "Rarely") {
             details.style.display = "";
         } else {
             details.style.display = "none";
+            details.required = false;
         }
     }
 
     // --- Dynamic flight questions ---
     function renderFlightQuestions() {
-        const count = parseInt(form.flight_count?.value || 0);
+        const count = parseInt(form.how_many_flights_have_you_taken_in_the_past_year?.value || 0);
         const details = document.getElementById("flight-details");
         const list = document.getElementById("flight-type-list");
         list.innerHTML = "";
@@ -803,7 +836,7 @@
         }
     }
 
-    form.flight_count?.addEventListener("input", () => {
+    form.how_many_flights_have_you_taken_in_the_past_year?.addEventListener("input", () => {
         renderFlightQuestions();
         updateSurveyProgress();
     });
@@ -820,10 +853,10 @@
                 total++;
         });
         // Add vehicle sub-questions
-        const vehicleCount = parseInt(form.vehicle_count?.value || 0);
+        const vehicleCount = parseInt(form.how_many_vehicles_are_in_your_household?.value || 0);
         total += vehicleCount * 3; // 3 questions per vehicle
         // Add flight sub-questions
-        const flightCount = parseInt(form.flight_count?.value || 0);
+        const flightCount = parseInt(form.how_many_flights_have_you_taken_in_the_past_year?.value || 0);
         total += flightCount; // 1 question per flight
         return total;
     }
@@ -856,14 +889,13 @@
             if (allAnswered) answered++;
         });
         // Vehicle sub-questions
-        const vehicleCount = parseInt(form.vehicle_count?.value || 0);
+        const vehicleCount = parseInt(form.how_many_vehicles_are_in_your_household?.value || 0);
         for (let i = 1; i <= vehicleCount; i++) {
             if (form[`vehicle_${i}_type`]?.value) answered++;
-            if (form[`vehicle_${i}_efficiency`]?.value) answered++;
             if (form[`vehicle_${i}_mileage`]?.value) answered++;
         }
         // Flight sub-questions
-        const flightCount = parseInt(form.flight_count?.value || 0);
+        const flightCount = parseInt(form.how_many_flights_have_you_taken_in_the_past_year?.value || 0);
         for (let i = 1; i <= flightCount; i++) {
             if (form[`flight_${i}_type`]?.value) answered++;
         }
@@ -872,8 +904,6 @@
 
     function updateSurveyProgress() {
         handlePublicTransportDetails();
-        // renderVehicleQuestions(); // REMOVE from here
-        // renderFlightQuestions(); // REMOVE from here
         const totalQuestions = getTotalQuestions();
         const answered = getAnsweredQuestions();
         const percent = totalQuestions ? (answered / totalQuestions) * 100 : 0;
@@ -902,70 +932,22 @@
     // --- Change/input listeners ---
     form.addEventListener("change", updateSurveyProgress);
     form.addEventListener("input", updateSurveyProgress);
-    // --- Form submit: collect all data ---
+
     form.addEventListener("submit", (e) => {
         e.preventDefault();
         form.classList.add("disabled");
         statusMsg.classList.remove("hidden");
-        const data = {};
-        // Household & Home Energy
-        data.household_size = form.household_size?.value;
-        data.home_type = form.home_type?.value;
-        data.home_size = form.home_size?.value;
-        data.electricity_kwh = form.electricity_kwh?.value;
-        data.renewable_electricity = form.renewable_electricity?.value;
-        data.heating_source = form.heating_source?.value;
-        data.heating_usage = form.heating_usage?.value;
-        data.energy_saving = form.energy_saving?.value;
-        // Transportation
-        data.vehicle_count = form.vehicle_count?.value;
-        data.vehicles = [];
-        for (let i = 1; i <= parseInt(form.vehicle_count?.value || 0); i++) {
-            data.vehicles.push({
-                type: form[`vehicle_${i}_type`]?.value,
-                efficiency: form[`vehicle_${i}_efficiency`]?.value,
-                mileage: form[`vehicle_${i}_mileage`]?.value,
-            });
-        }
-        data.public_transport_freq = form.public_transport_freq?.value;
-        data.public_transport_miles = form.public_transport_miles?.value;
-        data.flight_count = form.flight_count?.value;
-        data.flights = [];
-        for (let i = 1; i <= parseInt(form.flight_count?.value || 0); i++) {
-            data.flights.push({
-                type: form[`flight_${i}_type`]?.value,
-            });
-        }
-        // Diet & Food
-        data.diet_type = form.diet_type?.value;
-        data.organic_local = form.organic_local?.value;
-        data.food_waste = form.food_waste?.value;
-        data.food_packaged = form.food_packaged?.value;
-        data.compost = form.compost?.value;
-        // Waste & Recycling
-        data.recycle_paper = form.recycle_paper?.checked;
-        data.recycle_glass = form.recycle_glass?.checked;
-        data.recycle_metal = form.recycle_metal?.checked;
-        data.recycle_plastic = form.recycle_plastic?.checked;
-        data.waste_amount = form.waste_amount?.value;
-        // Shopping & Misc
-        data.shopping_freq = form.shopping_freq?.value;
-        data.second_hand = form.second_hand?.value;
-        data.offset = form.offset?.value;
-        // Water Usage
-        data.water_usage = form.water_usage?.value;
-        data.water_saving = form.water_saving?.value;
-        // Log the JSON object
-        console.log("Survey Form Data:", data);
+
         setTimeout(() => {
             window.location.href = '/';
         }, 1000);
-    });
+    })
+
     // --- Initial render ---
     renderVehicleQuestions();
     renderFlightQuestions();
-    // Force household_size input to be empty on load
-    if (form.household_size) form.household_size.value = "";
+    // Force how_many_people_are_in_your_household input to be empty on load
+    if (form.how_many_people_are_in_your_household) form.how_many_people_are_in_your_household.value = "";
     updateSurveyProgress();
 
     // Patch getAnsweredQuestions to only count household_size if > 0
@@ -976,8 +958,8 @@
             if (
                 item.style.display === "none" ||
                 item.classList.contains("hidden")
-            )
-                return;
+            ) return;
+
             const requiredInputs = item.querySelectorAll(
                 "input[required], select[required]"
             );
@@ -1000,28 +982,19 @@
             if (allAnswered) answered++;
         });
         // Vehicle sub-questions
-        const vehicleCount = parseInt(form.vehicle_count?.value || 0);
+        const vehicleCount = parseInt(form.how_many_vehicles_are_in_your_household?.value || 0);
         for (let i = 1; i <= vehicleCount; i++) {
             if (form[`vehicle_${i}_type`]?.value) answered++;
-            if (form[`vehicle_${i}_efficiency`]?.value) answered++;
             if (form[`vehicle_${i}_mileage`]?.value) answered++;
         }
         // Flight sub-questions
-        const flightCount = parseInt(form.flight_count?.value || 0);
+        const flightCount = parseInt(form.how_many_flights_have_you_taken_in_the_past_year?.value || 0);
         for (let i = 1; i <= flightCount; i++) {
             if (form[`flight_${i}_type`]?.value) answered++;
         }
         return answered;
     };
 
-
-    /**
-     * Attaches a submit event listener to a form to collect all non-empty fields
-     * and send them as a POST request to a backend endpoint.
-     *
-     * @param {string} formId The ID of the form to attach the listener to.
-     * @param {string} endpoint The URL to which the data will be sent.
-     */
     function handleFormSubmit(formId, endpoint) {
         const form = document.getElementById(formId);
 
@@ -1031,13 +1004,11 @@
         }
 
         form.addEventListener('submit', function (event) {
-            // Prevent the default browser form submission
             event.preventDefault();
 
             // Create a FormData object from the form
             const formData = new FormData(form);
 
-            // Create a plain JavaScript object to hold the non-empty field data
             const dataToSend = {};
 
             // Iterate over the form entries
@@ -1063,50 +1034,32 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    // This header is crucial for Django's security
                     'X-CSRFToken': getCsrfToken(),
                 },
-                // Convert the JavaScript object to a JSON string
                 body: JSON.stringify(dataToSend)
             })
                 .then(response => {
-                    // Check if the request was successful
                     if (!response.ok) {
-                        // If not, throw an error to be caught by the .catch block
                         throw new Error(`Network response was not ok (${response.status})`);
                     }
-                    // Parse the JSON response from the server
                     return response.json();
                 })
                 .then(data => {
-                    // Handle the successful response from the server
                     console.log('Success:', data);
-                    alert('Form submitted successfully!');
-                    // Example: Redirect on success
-                    // if (data.redirect_url) {
-                    //   window.location.href = data.redirect_url;
-                    // }
                 })
                 .catch(error => {
-                    // Handle any errors that occurred during the fetch operation
                     console.error('Error:', error);
                     alert('An error occurred while submitting the form. Please try again.');
                 });
         });
     }
 
-    /**
-     * Utility function to retrieve the CSRF token from the browser's cookies.
-     * This is required for making secure POST requests to a Django backend.
-     * @returns {string|null} The CSRF token, or null if not found.
-     */
     function getCsrfToken() {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
             const cookies = document.cookie.split(';');
             for (let i = 0; i < cookies.length; i++) {
                 const cookie = cookies[i].trim();
-                // Does this cookie string begin with the name we want?
                 if (cookie.substring(0, 'csrftoken'.length + 1) === ('csrftoken=')) {
                     cookieValue = decodeURIComponent(cookie.substring('csrftoken'.length + 1));
                     break;
@@ -1116,71 +1069,16 @@
         return cookieValue;
     }
 
-    // --- HOW TO USE ---
-    // Call the function once the DOM is fully loaded, targeting your form and endpoint.
-    // For example, if you have a form with id="survey-form" and want to send it to "/submit-survey/"
-    // document.addEventListener('DOMContentLoaded', () => {
-    //   handleFormSubmit('survey-form', '/submit-survey/');
-    // });
-
     document.addEventListener('DOMContentLoaded', () => {
         handleFormSubmit('survey-form', 'survey');
     });
 
-
-
-
-    form.addEventListener('submit', function(event) {
-    // Stop the form from submitting initially
-    event.preventDefault();
-
-    let firstInvalidField = null;
-
-    // Check all 'required' fields in the form
-    for (const element of form.elements) {
-        if (element.hasAttribute('required')) {
-            // A simple validity check: is the field empty?
-            if (!element.value || (element.type === 'radio' && !form.querySelector(`input[name="${element.name}"]:checked`))) {
-                firstInvalidField = element;
-                break; // Stop at the first invalid one
-            }
-        }
+    function showStep(stepToShow) {
+        document.querySelectorAll('.form-step').forEach(step => {
+            step.style.display = 'none'; // Hide all steps
+        });
+        stepToShow.style.display = 'block'; // Show the target step
     }
-
-    if (firstInvalidField) {
-        // --- This is where you take control ---
-        console.error(`Invalid field found:`, firstInvalidField);
-
-        // 1. Find the parent step/tab of the invalid field
-        const invalidStep = firstInvalidField.closest('.form-step');
-
-        if (invalidStep) {
-            // 2. Make that step visible
-            // (You'll need to hide the other steps and show this one)
-            showStep(invalidStep); // This is a function you would write
-
-            // 3. Now that it's visible, you CAN focus it
-            firstInvalidField.focus();
-
-            // 4. Show a user-friendly message
-            alert(`Please complete the required field: "${firstInvalidField.name}"`);
-        }
-    } else {
-        // If we get here, the form is valid and can be submitted
-        console.log("Form is valid! Submitting...");
-        // If you were using the generic POST script, you would call it here.
-        // Or, you can now use form.submit() to do a classic submission.
-        // form.submit();
-    }
-});
-
-// Example function to show a form step
-function showStep(stepToShow) {
-    document.querySelectorAll('.form-step').forEach(step => {
-        step.style.display = 'none'; // Hide all steps
-    });
-    stepToShow.style.display = 'block'; // Show the target step
-}
 
 </script>
 </body>

@@ -183,49 +183,7 @@
           Personalized Suggestions
         </h2>
         <div id="suggestion-cards-container">
-          <div class="suggestion-card">
-            <h3>Take Shorter Showers</h3>
-            <p>
-              Save water and energy by reducing your shower time by 2 minutes.
-            </p>
-            <div><span class="suggestion-reduction">-2kg CO₂/month</span></div>
-          </div>
-          <div class="suggestion-card">
-            <h3>Bike or Walk Instead of Driving</h3>
-            <p>
-              Reduce emissions by choosing active transport for short trips.
-            </p>
-            <div><span class="suggestion-reduction">-5kg CO₂/month</span></div>
-          </div>
-          <div class="suggestion-card">
-            <h3>Switch to LED Bulbs</h3>
-            <p>LEDs use less energy and last longer than traditional bulbs.</p>
-            <div><span class="suggestion-reduction">-1kg CO₂/month</span></div>
-          </div>
-          <div class="suggestion-card">
-            <h3>Eat a Plant-Based Meal</h3>
-            <p>
-              Plant-based meals have a lower carbon footprint than meat-based
-              ones.
-            </p>
-            <div><span class="suggestion-reduction">-3kg CO₂/meal</span></div>
-          </div>
-          <div class="suggestion-card">
-            <h3>Unplug Idle Electronics</h3>
-            <p>
-              Reduce phantom energy use by unplugging devices when not in use.
-            </p>
-            <div>
-              <span class="suggestion-reduction">-0.5kg CO₂/month</span>
-            </div>
-          </div>
-          <div class="suggestion-card">
-            <h3>Compost Food Scraps</h3>
-            <p>Composting reduces landfill waste and methane emissions.</p>
-            <div>
-              <span class="suggestion-reduction">-1.5kg CO₂/month</span>
-            </div>
-          </div>
+
         </div>
       </section>
 
@@ -419,6 +377,7 @@
     </div>
     <script src="{% static 'app.js' %}"></script>
     <script src="{% static 'api.js' %}"></script>
+    <script src="{% static 'script.js' %}"></script>
     <script>
       document.addEventListener("DOMContentLoaded", function () {
         if (typeof EcoTrackApp === "function") {

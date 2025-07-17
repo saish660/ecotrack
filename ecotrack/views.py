@@ -8,10 +8,16 @@ from .models import User
 from django.db import IntegrityError
 from django.contrib.auth import login, authenticate, logout
 from django.urls import reverse
+from .utils import *
+from uuid import uuid4
+import requests
+from google import genai
 
-# Create your views here.
+
 @login_required
 def index(request):
+    if not request.user.survey_answered:
+        return HttpResponseRedirect(reverse('survey'))
     return render(request, "index.html")
 
 
@@ -120,12 +126,81 @@ def logout_view(request):
     })
 
 
+@login_required
 def survey(request):
     if request.method == 'POST':
+        user = request.user
         data = json.loads(request.body)
-        content = data.get('body')
-        print(content)
+        user.user_data = data
+        user.survey_answered = True
+        user.carbon_footprint = calculate_personal_carbon_footprint(data)['summary']['personal_monthly_co2e_kg']
+        user.sustainability_score = calculate_initial_sustainability_score(user.user_data)['initial_sustainability_score']
+        user.save()
+        return JsonResponse({'status': 'success', 'message': 'Survey submitted successfully'}, status=200)
 
     if request.user.survey_answered:
         return HttpResponseRedirect(reverse('index'))
     return render(request, "survey_form.html")
+
+
+@login_required
+def get_user_data(request):
+    return JsonResponse({'status': 'success', 'data': {
+        "username": request.user.username,
+        "streak": request.user.streak,
+        "carbon_footprint": request.user.carbon_footprint,
+        "sustainability_score": request.user.sustainability_score,
+        "habits": request.user.habits,
+    }})
+
+
+@login_required
+def get_achievements(request):
+    return JsonResponse({'status': 'success', 'data': {
+        "achievements": request.user.achievements,
+    }})
+
+
+@login_required
+def save_habit(request):
+    data = json.loads(request.body)
+    habit_id = uuid4()
+    request.user.habits[str(habit_id.int)[:5]] = data.get('habit_text')
+    request.user.save()
+    return JsonResponse({'status': 'success', 'message': 'Habit saved successfully'})
+
+
+@login_required
+def update_habit(request):
+    data = json.loads(request.body)
+    habit_id = data.get('habit_id')
+    habit_text = data.get('habit_text')
+    request.user.habits[habit_id] = habit_text
+    request.user.save()
+    return JsonResponse({'status': 'success', 'message': 'Habit updated successfully'})
+
+
+@login_required
+def delete_habit(request):
+    data = json.loads(request.body)
+    habit_id = str(data.get('habit_id'))
+    del request.user.habits[habit_id]
+    request.user.save()
+    return JsonResponse({'status': 'success', 'message': 'Habit deleted successfully'})
+
+@login_required
+def submit_questionnaire(request):
+    pass
+
+
+
+@login_required
+def get_suggestions(request):
+    client = genai.Client()
+
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents="Give me a few suggestions of habit to perform to reduce carbon footprint. Give the output in json format:{habit_title:title, description:description, expected_carbon_footprint_reduction: value}",
+    )
+    print(response.text)
+    return JsonResponse({'status': 'success', 'data': response.text})
