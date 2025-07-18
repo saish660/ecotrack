@@ -11,7 +11,7 @@ class User(AbstractUser):
     streak = models.PositiveIntegerField(default=0)
     sustainability_score = models.PositiveIntegerField(default=0)
     carbon_footprint = models.FloatField(default=0)
-    habits = models.JSONField(default=get_default_dict, blank=True)
+    habits = models.JSONField(default=list, blank=True)
     user_data = models.JSONField(default=get_default_dict, blank=True)
     survey_answered = models.BooleanField(default=False)
     achievements = models.JSONField(default=list, blank=True)

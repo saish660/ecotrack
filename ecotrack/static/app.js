@@ -744,31 +744,46 @@ class EcoTrackApp {
     }
 
     // --- Daily Habit Checklist (Dashboard) ---
-    initializeDailyHabitChecklist() {
+    async initializeDailyHabitChecklist() {
         const form = document.getElementById("daily-habit-checklist-form");
         const list = document.getElementById("dashboard-habit-list");
         const statusMsg = document.getElementById("habit-checklist-status-message");
         if (!form || !list) return;
 
 
-        const habits =
-            JSON.parse(localStorage.getItem("habitsDB") || "null") || defaultHabits;
-        // Load state from localStorage
-        const today = new Date().toDateString();
-        const saved = JSON.parse(
-            localStorage.getItem("habitChecklistState") || "{}"
-        );
-        const submittedDate = saved.date;
-        const checked = saved.checked || [];
+        const habits = await fetch("get_user_data", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken(),
+            },
+            body: {}
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Network response was not ok (${response.status})`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                let habits = Object.entries(data.data.habits) || [];
+                if (typeof habits === 'object' && !Array.isArray(habits)) {
+                    habits = Object.values(habits);
+                }
+                return habits;
+            })
+
+        const today = new Date().toDateString()
+        console.log(habits);
         // If already submitted today, disable form
-        const isSubmitted = submittedDate === today;
+        // const isSubmitted = submittedDate === today;
         list.innerHTML = "";
         habits.forEach((habit) => {
             const li = document.createElement("li");
             li.className = "habit-item";
-            li.innerHTML = `<label><input type="checkbox" value="${habit.id}" ${
-                checked.includes(habit.id) ? "checked" : ""
-            } ${isSubmitted ? "disabled" : ""}> ${habit.text}</label>`;
+            li.innerHTML = `<label><input type="checkbox" value="${habit['id']}" ${
+                checked.includes(habit['id']) ? "checked" : ""
+            } ${isSubmitted ? "disabled" : ""}> ${habit['text']}</label>`;
             list.appendChild(li);
         });
         form.querySelectorAll("input[type='checkbox']").forEach((cb) => {
@@ -777,10 +792,6 @@ class EcoTrackApp {
                 const checkedIds = Array.from(
                     form.querySelectorAll("input[type='checkbox']:checked")
                 ).map((cb) => parseInt(cb.value));
-                localStorage.setItem(
-                    "habitChecklistState",
-                    JSON.stringify({date: submittedDate, checked: checkedIds})
-                );
             });
         });
         // Handle submit

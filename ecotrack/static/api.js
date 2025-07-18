@@ -348,38 +348,4 @@ class EcoTrackAPI {
         };
     }
 
-    async createHabit(habitData) {
-        // Mock API call for creating habits
-        console.log("Creating habit:", habitData);
-
-        await new Promise((resolve) => setTimeout(resolve, 300));
-
-        return {
-            success: true,
-            id: Date.now(),
-            ...habitData,
-        };
-    }
-
-    async updateHabit(habitId, completed) {
-        // Mock API call for updating habits
-        console.log("Updating habit:", habitId, completed);
-
-        await new Promise((resolve) => setTimeout(resolve, 200));
-
-        return {
-            success: true,
-        };
-    }
-
-    async deleteHabit(habitId) {
-        // Mock API call for deleting habits
-        console.log("Deleting habit:", habitId);
-
-        await new Promise((resolve) => setTimeout(resolve, 200));
-
-        return {
-            success: true,
-        };
-    }
 }

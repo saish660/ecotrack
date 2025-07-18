@@ -89,14 +89,9 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const data = await response.json();
+      let habits = data.data.habits || [];
 
-      // Handle habits - convert object to array if needed
-      let habits = Object.entries(data.data.habits) || [];
-      if (typeof habits === 'object' && !Array.isArray(habits)) {
-        // Convert object to array
-        habits = Object.values(habits);
-      }
-
+      console.log(habits[1])
       userData = {
         username: data.data.username || '',
         streak: data.data.streak || 0,
@@ -105,7 +100,6 @@ document.addEventListener("DOMContentLoaded", () => {
         habits: habits
       };
 
-      console.log(habits)
 
       return userData;
     } catch (error) {
@@ -195,7 +189,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function deleteHabit(habitId) {
     try {
-      const response = await fetch("/delete_habit", {
+      const response = await fetch("delete_habit", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -220,7 +214,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function toggleHabitCompletion(habitId) {
     try {
-      const response = await fetch("/toggle_habit", {
+      const response = await fetch("toggle_habit", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -260,23 +254,22 @@ document.addEventListener("DOMContentLoaded", () => {
     userData.habits.forEach((habit, idx) => {
       const li = document.createElement("li");
       li.className = "habit-item";
-
       if (habit.editing) {
         li.innerHTML = `
-          <input type='text' class='add-habit-input' value="${habit[1]}" style="flex:1;max-width:60%;margin-right:0.5rem;" />
+          <input type='text' class='add-habit-input' value="${habit['text']}" style="flex:1;max-width:60%;margin-right:0.5rem;" />
           <span class="habit-actions">
-            <button class="habit-action-btn save-edit" data-id="${habit[0]}" title="Save">💾</button>
-            <button class="habit-action-btn cancel-edit" data-id="${habit[0]}" title="Cancel">✖️</button>
+            <button class="habit-action-btn save-edit" data-id="${habit['id']}" title="Save">💾</button>
+            <button class="habit-action-btn cancel-edit" data-id="${habit['id']}" title="Cancel">✖️</button>
           </span>
         `;
       } else {
         li.innerHTML = `
           <label class="habit-checkbox">
-            <span class="habit-text">${habit[1]}</span>
+            <span class="habit-text">${habit['text']}</span>
           </label>
           <span class="habit-actions">
-            <button class="habit-action-btn edit-habit" data-id="${habit[0]}" title="Edit">✏️</button>
-            <button class="habit-action-btn delete-habit" data-id="${habit[0]}" title="Delete">🗑️</button>
+            <button class="habit-action-btn edit-habit" data-id="${habit['id']}" title="Edit">✏️</button>
+            <button class="habit-action-btn delete-habit" data-id="${habit['id']}" title="Delete">🗑️</button>
           </span>
         `;
       }

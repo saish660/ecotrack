@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.http import JsonResponse, HttpResponseRedirect
@@ -165,7 +167,13 @@ def get_achievements(request):
 def save_habit(request):
     data = json.loads(request.body)
     habit_id = uuid4()
-    request.user.habits[str(habit_id.int)[:5]] = data.get('habit_text')
+    current_date = datetime.now() - timedelta(days=1)
+    habit = {
+        "id": str(habit_id.int)[:5],
+        "text": data.get('habit_text'),
+        "last_checked": current_date.strftime("%Y-%m-%d")
+    }
+    request.user.habits.append(habit)
     request.user.save()
     return JsonResponse({'status': 'success', 'message': 'Habit saved successfully'})
 
@@ -173,20 +181,42 @@ def save_habit(request):
 @login_required
 def update_habit(request):
     data = json.loads(request.body)
-    habit_id = data.get('habit_id')
-    habit_text = data.get('habit_text')
-    request.user.habits[habit_id] = habit_text
-    request.user.save()
-    return JsonResponse({'status': 'success', 'message': 'Habit updated successfully'})
+    habit_id_to_update = data.get('habit_id') # This is the 'id' within the habit dictionary
+    new_habit_text = data.get('habit_text')
+
+    # Find the habit by its 'id' in the list
+    found = False
+    for habit in request.user.habits:
+        if habit.get('id') == habit_id_to_update:
+            habit['text'] = new_habit_text
+            found = True
+            break # Exit loop once the habit is found and updated
+
+    if found:
+        request.user.save() # Save the user object to persist changes to the habits list
+        return JsonResponse({'status': 'success', 'message': 'Habit updated successfully'})
+    else:
+        return JsonResponse({'status': 'error', 'message': 'Habit not found'}, status=404)
 
 
 @login_required
 def delete_habit(request):
     data = json.loads(request.body)
-    habit_id = str(data.get('habit_id'))
-    del request.user.habits[habit_id]
-    request.user.save()
-    return JsonResponse({'status': 'success', 'message': 'Habit deleted successfully'})
+    habit_id_to_delete = str(data.get('habit_id')) # Ensure it's a string for comparison
+
+    # Create a new list excluding the habit to be deleted
+    # This is a common and safe way to remove items from a list while iterating
+    initial_habits_count = len(request.user.habits)
+    request.user.habits = [
+        habit for habit in request.user.habits
+        if habit.get('id') != habit_id_to_delete
+    ]
+
+    if len(request.user.habits) < initial_habits_count:
+        request.user.save() # Save changes if a habit was actually removed
+        return JsonResponse({'status': 'success', 'message': 'Habit deleted successfully'})
+    else:
+        return JsonResponse({'status': 'error', 'message': 'Habit not found'}, status=404)
 
 @login_required
 def submit_questionnaire(request):
@@ -196,6 +226,7 @@ def submit_questionnaire(request):
 
 @login_required
 def get_suggestions(request):
+    return JsonResponse({'status': 'success', 'data': "Hello, world"})
     client = genai.Client()
 
     response = client.models.generate_content(
