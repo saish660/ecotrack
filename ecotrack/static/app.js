@@ -748,6 +748,7 @@ class EcoTrackApp {
         const form = document.getElementById("daily-habit-checklist-form");
         const list = document.getElementById("dashboard-habit-list");
         const statusMsg = document.getElementById("habit-checklist-status-message");
+        let submittedDate;
         if (!form || !list) return;
 
 
@@ -766,6 +767,7 @@ class EcoTrackApp {
                 return response.json();
             })
             .then(data => {
+                submittedDate = data.data.habit_checked_date
                 let habits = Object.entries(data.data.habits) || [];
                 if (typeof habits === 'object' && !Array.isArray(habits)) {
                     habits = Object.values(habits);
@@ -773,10 +775,20 @@ class EcoTrackApp {
                 return habits;
             })
 
+        function isTodayOrPast(inputDateString) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const inputDate = new Date(inputDateString);
+            inputDate.setHours(0, 0, 0, 0);
+
+            return inputDate >= today;
+        }
+
+        let isSubmitted = isTodayOrPast(submittedDate);
         const today = new Date().toDateString()
-        console.log(habits);
+
         // If already submitted today, disable form
-        // const isSubmitted = submittedDate === today;
         list.innerHTML = "";
         habits.forEach((habit) => {
             const li = document.createElement("li");
@@ -794,6 +806,7 @@ class EcoTrackApp {
                 ).map((cb) => parseInt(cb.value));
             });
         });
+
         // Handle submit
         form.onsubmit = (e) => {
             e.preventDefault();
@@ -840,18 +853,25 @@ class EcoTrackApp {
         const width = container.offsetWidth || 400;
         const height = container.offsetHeight || 300;
         const scene = new THREE.Scene();
+
         // --- Dynamic sky and grass color based on score ---
         let skyColor, grassColor;
         const score = parseInt(document.getElementById("sustainability-score")?.textContent || "0");
-        if (score < 20) {
-            skyColor = 0xadb5bd; // grayish sky
-            grassColor = 0xc2b280; // brown/yellow grass
+        const deadGrassColor = 0x8b7a67; // A distinct dead brown/gray for grass
+
+        // NEW: Simplified sky and grass color logic for very low scores
+        if (score <= 10) {
+            skyColor = 0x5a5a5a; // A very bleak, dark gray sky
+            grassColor = 0x6b5a4b; // Dark, dead earth color
+        } else if (score < 20) { // Changed threshold from 30 to 20 to accommodate new dead elements
+            skyColor = 0xadb5bd; // Grayish sky
+            grassColor = deadGrassColor; // Distinct dead grass color
         } else if (score > 70) {
-            skyColor = 0x7ecbff; // bright blue sky
-            grassColor = 0x3cb043; // lush green grass
+            skyColor = 0x7ecbff; // Bright blue sky
+            grassColor = 0x3cb043; // Lush green grass
         } else {
-            // Interpolate between dead and lush
-            const t = (score - 20) / 50;
+            // Interpolate between dead and lush (score 20-70)
+            const t = (score - 20) / 50; // Adjusted interpolation range
             // Sky: 0xadb5bd (gray) to 0x7ecbff (blue)
             const skyDead = {r: 0xad, g: 0xb5, b: 0xbd};
             const skyLush = {r: 0x7e, g: 0xcb, b: 0xff};
@@ -859,52 +879,57 @@ class EcoTrackApp {
             const skyG = Math.round(skyDead.g + (skyLush.g - skyDead.g) * t);
             const skyB = Math.round(skyDead.b + (skyLush.b - skyDead.b) * t);
             skyColor = (skyR << 16) | (skyG << 8) | skyB;
-            // Grass: 0xc2b280 (brown) to 0x3cb043 (green)
-            const grassDead = {r: 0xc2, g: 0xb2, b: 0x80};
+
+            // Grass: 0x8b7a67 (dead brown/gray) to 0x3cb043 (green)
+            const grassDeadRGB = {
+                r: (deadGrassColor >> 16) & 0xFF,
+                g: (deadGrassColor >> 8) & 0xFF,
+                b: deadGrassColor & 0xFF
+            };
             const grassLush = {r: 0x3c, g: 0xb0, b: 0x43};
-            const grassR = Math.round(grassDead.r + (grassLush.r - grassDead.r) * t);
-            const grassG = Math.round(grassDead.g + (grassLush.g - grassDead.g) * t);
-            const grassB = Math.round(grassDead.b + (grassLush.b - grassDead.b) * t);
+            const grassR = Math.round(grassDeadRGB.r + (grassLush.r - grassDeadRGB.r) * t);
+            const grassG = Math.round(grassDeadRGB.g + (grassLush.g - grassDeadRGB.g) * t);
+            const grassB = Math.round(grassDeadRGB.b + (grassLush.b - grassDeadRGB.b) * t);
             grassColor = (grassR << 16) | (grassG << 8) | grassB;
         }
+
         // Sky dome (large sphere)
         const skyGeo = new THREE.SphereGeometry(60, 32, 32);
         const skyMat = new THREE.MeshBasicMaterial({color: skyColor, side: THREE.BackSide});
         const sky = new THREE.Mesh(skyGeo, skyMat);
         scene.add(sky);
-        // Sun (large yellow sphere in the sky)
+
+        // Sun (large yellow sphere in the sky) - Always present
         const sunGeo = new THREE.SphereGeometry(2.2, 24, 24);
         const sunMat = new THREE.MeshBasicMaterial({color: 0xfff066});
         const sun = new THREE.Mesh(sunGeo, sunMat);
         sun.position.set(-10, 18, -18);
         scene.add(sun);
+
         // Camera
         const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
         camera.position.set(0, 10, 28);
+
         // Renderer
         const renderer = new THREE.WebGLRenderer({antialias: true, alpha: true});
         renderer.setSize(width, height);
         container.appendChild(renderer.domElement);
+
         // Lighting
         const ambient = new THREE.AmbientLight(0xffffff, 0.7);
         scene.add(ambient);
         const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
         dirLight.position.set(10, 20, 10);
         scene.add(dirLight);
-        // Ground (dynamic grass color, larger land)
+
+        // Ground (dynamic grass color, larger land) - Always present
         const groundGeo = new THREE.CylinderGeometry(16, 16, 1.5, 40);
         const groundMat = new THREE.MeshLambertMaterial({color: grassColor});
         const ground = new THREE.Mesh(groundGeo, groundMat);
         ground.position.y = -1;
         scene.add(ground);
-        // Add dirt patch
-        const dirtGeo = new THREE.CircleGeometry(4, 24);
-        const dirtMat = new THREE.MeshLambertMaterial({color: 0xc2b280});
-        const dirt = new THREE.Mesh(dirtGeo, dirtMat);
-        dirt.rotation.x = -Math.PI / 2;
-        dirt.position.y = -0.7;
-        scene.add(dirt);
-        // Add rocks
+
+        // Rocks (remains same color) - Always present
         for (let i = 0; i < 5; i++) {
             const rockGeo = new THREE.DodecahedronGeometry(0.4 + Math.random() * 0.3);
             const rockMat = new THREE.MeshLambertMaterial({color: 0x888888});
@@ -915,215 +940,235 @@ class EcoTrackApp {
             rock.rotation.y = Math.random() * Math.PI;
             scene.add(rock);
         }
-        // Add flowers
-        for (let i = 0; i < 8; i++) {
-            const flowerGeo = new THREE.CylinderGeometry(0.07, 0.07, 0.5, 8);
-            const flowerMat = new THREE.MeshLambertMaterial({color: 0x4caf50});
-            const stem = new THREE.Mesh(flowerGeo, flowerMat);
-            const angle = Math.random() * Math.PI * 2;
-            const r = 5 + Math.random() * 5;
-            stem.position.set(Math.cos(angle) * r, 0, Math.sin(angle) * r);
-            // Petal
-            const petalGeo = new THREE.SphereGeometry(0.18, 8, 8);
-            const petalMat = new THREE.MeshLambertMaterial({color: 0xffc0cb});
-            const petal = new THREE.Mesh(petalGeo, petalMat);
-            petal.position.set(0, 0.3, 0);
-            stem.add(petal);
-            scene.add(stem);
+
+        // NEW: Add bone pieces/skulls for scores below 10
+        if (score <= 10) {
+            const boneCount = 8; // A fixed number for the bleakest landscape
+            for (let i = 0; i < boneCount; i++) {
+                const bone = new THREE.Group();
+                const boneGeo = new THREE.CylinderGeometry(0.8, 0.08, 0.8, 6);
+                const boneMat = new THREE.MeshLambertMaterial({color: 0xe0e0d1}); // Off-white bone color
+                const mainBone = new THREE.Mesh(boneGeo, boneMat);
+                bone.add(mainBone);
+
+                // Add spherical ends to the bones
+                const endGeo = new THREE.SphereGeometry(0.15, 8, 8);
+                const end1 = new THREE.Mesh(endGeo, boneMat);
+                end1.position.y = 0.4;
+                bone.add(end1);
+                const end2 = new THREE.Mesh(endGeo, boneMat);
+                end2.position.y = -0.4;
+                bone.add(end2);
+
+                const angle = Math.random() * Math.PI * 2;
+                const r = 4 + Math.random() * 8;
+                bone.position.set(Math.cos(angle) * r, -0.6, Math.sin(angle) * r);
+                bone.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+                scene.add(bone);
+            }
         }
-        // Trees: more realistic, multi-cone, color/size/rotation variation
-        const treeCount = Math.max(2, Math.floor(score / 20) + 2);
-        let leafColor;
-        if (score < 20) {
-            leafColor = 0xaaaaaa; // dead/pale
-        } else if (score > 70) {
-            leafColor = 0x1fa72a; // vivid green
-        } else {
-            // Interpolate between pale and vivid green
-            // 0xaaaaaa (pale) to 0x1fa72a (vivid)
-            const t = (score - 20) / 50;
-            // Linear interpolation for RGB
-            const pale = {r: 0xaa, g: 0xaa, b: 0xaa};
-            const vivid = {r: 0x1f, g: 0xa7, b: 0x2a};
-            const r = Math.round(pale.r + (vivid.r - pale.r) * t);
-            const g = Math.round(pale.g + (vivid.g - pale.g) * t);
-            const b = Math.round(pale.b + (vivid.b - pale.b) * t);
-            leafColor = (r << 16) | (g << 8) | b;
-        }
-        for (let i = 0; i < treeCount; i++) {
-            const angle = (i / treeCount) * Math.PI * 2 + Math.random() * 0.2;
-            const x = Math.cos(angle) * (8 + Math.random() * 4);
-            const z = Math.sin(angle) * (8 + Math.random() * 4);
-            // Trunk
-            const trunkGeo = new THREE.CylinderGeometry(0.3, 0.4, 2.5 + Math.random(), 8);
-            const trunkMat = new THREE.MeshLambertMaterial({color: score < 20 ? 0x6b4f2a : 0x8b5a2b});
-            const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-            trunk.position.set(x, 0.5, z);
-            trunk.rotation.y = Math.random() * Math.PI;
-            scene.add(trunk);
-            // Leaves (multi-cone)
-            let leafTops = [];
+
+        // NEW: Only add the following ecosystem elements if the score is above 10
+        if (score > 10) {
+            // Add dirt patch (remains same color)
+            const dirtGeo = new THREE.CircleGeometry(4, 24);
+            const dirtMat = new THREE.MeshLambertMaterial({color: 0xc2b280});
+            const dirt = new THREE.Mesh(dirtGeo, dirtMat);
+            dirt.rotation.x = -Math.PI / 2;
+            dirt.position.y = -0.7;
+            scene.add(dirt);
+
+            // NEW: Add dead grass bushes and logs for scores below 20 (but above 10)
             if (score < 20) {
-                // Dead trees: sparse, pale cones or none
-                if (Math.random() < 0.5) continue;
-                for (let j = 0; j < 1; j++) {
-                    const leavesGeo = new THREE.ConeGeometry(1.1 + Math.random() * 0.5, 2.2 + Math.random() * 0.5, 10);
-                    const leavesMat = new THREE.MeshLambertMaterial({color: 0xcccccc});
-                    const leaves = new THREE.Mesh(leavesGeo, leavesMat);
-                    leaves.position.set(x, 2.2 + j * 0.7, z);
-                    leaves.rotation.y = Math.random() * Math.PI;
-                    scene.add(leaves);
-                    leafTops.push(leaves.position.clone());
+                // Dead Grass Bushes
+                for (let i = 0; i < 15; i++) {
+                    const bushGeo = new THREE.SphereGeometry(0.5 + Math.random() * 0.4, 8, 6);
+                    const bushMat = new THREE.MeshLambertMaterial({color: 0x6b5a4b}); // Dead bush color
+                    const bush = new THREE.Mesh(bushGeo, bushMat);
+                    const angle = Math.random() * Math.PI * 2;
+                    const r = 2 + Math.random() * 12;
+                    bush.position.set(Math.cos(angle) * r, -0.5, Math.sin(angle) * r);
+                    scene.add(bush);
                 }
-            } else {
-                for (let j = 0; j < 2 + Math.floor(Math.random() * 2); j++) {
-                    const leavesGeo = new THREE.ConeGeometry(1.1 + Math.random() * 0.5, 2.2 + score / 50 + Math.random() * 0.5, 10);
-                    const leavesMat = new THREE.MeshLambertMaterial({color: leafColor});
-                    const leaves = new THREE.Mesh(leavesGeo, leavesMat);
-                    leaves.position.set(x, 2.2 + j * 0.7, z);
-                    leaves.rotation.y = Math.random() * Math.PI;
-                    scene.add(leaves);
-                    leafTops.push(leaves.position.clone());
+
+                // Logs
+                for (let i = 0; i < 6; i++) {
+                    const logGeo = new THREE.CylinderGeometry(0.2, 0.2, 1.5 + Math.random(), 8);
+                    const logMat = new THREE.MeshLambertMaterial({color: 0x5c4033}); // Dark wood color
+                    const log = new THREE.Mesh(logGeo, logMat);
+                    const angle = Math.random() * Math.PI * 2;
+                    const r = 5 + Math.random() * 9;
+                    log.position.set(Math.cos(angle) * r, -0.6, Math.sin(angle) * r);
+                    log.rotation.z = Math.PI / 2 + (Math.random() - 0.5);
+                    log.rotation.y = Math.random() * Math.PI;
+                    scene.add(log);
                 }
             }
-            // Add fruits (more with higher score)
-            if (score >= 20) {
-                const fruitTypes = [
-                    {color: 0xff2d2d, name: 'apple'},
-                    {color: 0xffa500, name: 'orange'},
-                    {color: 0xffe066, name: 'lemon'},
-                ];
-                const fruitCount = Math.floor(1 + (score / 100) * 4 + Math.random() * 2); // 1-6 fruits per tree
-                for (let f = 0; f < fruitCount; f++) {
-                    const fruitType = fruitTypes[Math.floor(Math.random() * fruitTypes.length)];
-                    const fruitGeo = new THREE.SphereGeometry(0.15 + Math.random() * 0.05, 8, 8);
-                    const fruitMat = new THREE.MeshLambertMaterial({color: fruitType.color});
-                    const fruit = new THREE.Mesh(fruitGeo, fruitMat);
-                    // Place fruit near a random leaf top, with some random offset
-                    if (leafTops.length > 0) {
-                        const top = leafTops[Math.floor(Math.random() * leafTops.length)];
-                        fruit.position.set(
-                            top.x + (Math.random() - 0.5) * 0.7,
-                            top.y - 0.5 + (Math.random() - 0.5) * 0.4,
-                            top.z + (Math.random() - 0.5) * 0.7
-                        );
-                    } else {
-                        fruit.position.set(x, 2.2, z);
+
+            // Flowers (dull or vibrant based on score)
+            const flowerBaseColor = (score < 30) ? 0x909090 : 0x4caf50; // Duller stem for low score
+            const petalBaseColor = (score < 30) ? 0xcccccc : 0xffc0cb; // Duller petals for low score
+            for (let i = 0; i < 8; i++) {
+                const flowerGeo = new THREE.CylinderGeometry(0.07, 0.07, 0.5, 8);
+                const flowerMat = new THREE.MeshLambertMaterial({color: flowerBaseColor});
+                const stem = new THREE.Mesh(flowerGeo, flowerMat);
+                const angle = Math.random() * Math.PI * 2;
+                const r = 5 + Math.random() * 5;
+                stem.position.set(Math.cos(angle) * r, 0, Math.sin(angle) * r);
+                // Petal
+                const petalGeo = new THREE.SphereGeometry(0.18, 8, 8);
+                const petalMat = new THREE.MeshLambertMaterial({color: petalBaseColor});
+                const petal = new THREE.Mesh(petalGeo, petalMat);
+                petal.position.set(0, 0.3, 0);
+                stem.add(petal);
+                scene.add(stem);
+            }
+
+            // Trees: more realistic, multi-cone, color/size/rotation variation
+            const treeCount = Math.max(0, Math.floor(score / 20)); // Fewer or no trees for low scores
+            let leafColor;
+            if (score < 30) {
+                leafColor = 0xaaaaaa; // dead/pale leaves
+            } else if (score > 70) {
+                leafColor = 0x1fa72a; // vivid green
+            } else {
+                // Interpolate between pale and vivid green (score 30-70)
+                const t = (score - 30) / 40;
+                const pale = {r: 0xaa, g: 0xaa, b: 0xaa};
+                const vivid = {r: 0x1f, g: 0xa7, b: 0x2a};
+                const r = Math.round(pale.r + (vivid.r - pale.r) * t);
+                const g = Math.round(pale.g + (vivid.g - pale.g) * t);
+                const b = Math.round(pale.b + (vivid.b - pale.b) * t);
+                leafColor = (r << 16) | (g << 8) | b;
+            }
+
+            for (let i = 0; i < treeCount; i++) {
+                const angle = (i / treeCount) * Math.PI * 2 + Math.random() * 0.2;
+                const x = Math.cos(angle) * (8 + Math.random() * 4);
+                const z = Math.sin(angle) * (8 + Math.random() * 4);
+                // Trunk
+                const trunkMatColor = (score < 30) ? 0x6b4f2a : 0x8b5a2b; // Dead trunk color for low score
+                // MODIFIED: Trunk height now scales with the score
+                const trunkHeight = 1 + Math.random() + (score / 30);
+                const trunkGeo = new THREE.CylinderGeometry(0.3, 0.4, trunkHeight, 8);
+                const trunkMat = new THREE.MeshLambertMaterial({color: trunkMatColor});
+                const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+                trunk.position.set(x, trunkHeight / 2 - 1, z); // Adjust Y position based on height
+                trunk.rotation.y = Math.random() * Math.PI;
+                scene.add(trunk);
+
+                // Leaves (multi-cone)
+                let leafTops = [];
+                if (score < 30) {
+                    if (Math.random() < 0.6) continue;
+                    for (let j = 0; j < 1; j++) {
+                        const leavesGeo = new THREE.ConeGeometry(0.8 + Math.random() * 0.3, 1.5 + Math.random() * 0.3, 8);
+                        const leavesMat = new THREE.MeshLambertMaterial({color: 0x808080});
+                        const leaves = new THREE.Mesh(leavesGeo, leavesMat);
+                        leaves.position.set(x, trunkHeight - 0.7 + j * 0.5, z); // Adjust Y position based on trunk height
+                        leaves.rotation.y = Math.random() * Math.PI;
+                        scene.add(leaves);
+                        leafTops.push(leaves.position.clone());
                     }
-                    scene.add(fruit);
+                } else {
+                    for (let j = 0; j < 2 + Math.floor(Math.random() * 2); j++) {
+                        const leavesGeo = new THREE.ConeGeometry(1.1 + Math.random() * 0.5, 2.2 + score / 50 + Math.random() * 0.5, 10);
+                        const leavesMat = new THREE.MeshLambertMaterial({color: leafColor});
+                        const leaves = new THREE.Mesh(leavesGeo, leavesMat);
+                        leaves.position.set(x, trunkHeight - 0.3 + j * 0.7, z); // Adjust Y position based on trunk height
+                        leaves.rotation.y = Math.random() * Math.PI;
+                        scene.add(leaves);
+                        leafTops.push(leaves.position.clone());
+                    }
+                }
+            }
+
+            // Animals: add birds and rabbits, animate them
+            const carbonFootprint = parseFloat(document.getElementById("carbon-footprint")?.textContent || "0");
+            const animalReductionFactor = (carbonFootprint > 100 && score < 50) ? 0.5 : 1;
+            const baseAnimalCount = Math.max(0, Math.floor((score - 20) / 25));
+            const animalCount = Math.floor(baseAnimalCount * animalReductionFactor);
+
+            const animals = [];
+            for (let i = 0; i < animalCount; i++) {
+                if (Math.random() < 0.5) {
+                    // Bird
+                    const bird = new THREE.Group();
+                    const bodyGeo = new THREE.SphereGeometry(0.25, 8, 8);
+                    const bodyMat = new THREE.MeshLambertMaterial({color: 0x2196f3});
+                    const body = new THREE.Mesh(bodyGeo, bodyMat);
+                    bird.add(body);
+                    const beakGeo = new THREE.ConeGeometry(0.08, 0.18, 8);
+                    const beakMat = new THREE.MeshLambertMaterial({color: 0xffa726});
+                    const beak = new THREE.Mesh(beakGeo, beakMat);
+                    beak.position.set(0, 0, 0.28);
+                    beak.rotation.x = Math.PI / 2;
+                    bird.add(beak);
+                    for (let w = -1; w <= 1; w += 2) {
+                        const wingGeo = new THREE.BoxGeometry(0.18, 0.05, 0.5);
+                        const wingMat = new THREE.MeshLambertMaterial({color: 0x1976d2});
+                        const wing = new THREE.Mesh(wingGeo, wingMat);
+                        wing.position.set(w * 0.22, 0, 0);
+                        wing.rotation.z = w * 0.3;
+                        bird.add(wing);
+                    }
+                    bird.position.set(Math.random() * 10 - 5, 2.5 + Math.random() * 2, Math.random() * 10 - 5);
+                    scene.add(bird);
+                    animals.push({
+                        mesh: bird,
+                        type: 'bird',
+                        baseY: bird.position.y,
+                        phase: Math.random() * Math.PI * 2
+                    });
+                } else {
+                    // Rabbit
+                    const rabbit = new THREE.Group();
+                    const bodyGeo = new THREE.SphereGeometry(0.28, 10, 10);
+                    const bodyMat = new THREE.MeshLambertMaterial({color: 0xf5f5dc});
+                    const body = new THREE.Mesh(bodyGeo, bodyMat);
+                    rabbit.add(body);
+                    const headGeo = new THREE.SphereGeometry(0.18, 10, 10);
+                    const head = new THREE.Mesh(headGeo, bodyMat);
+                    head.position.set(0, 0.22, 0.18);
+                    rabbit.add(head);
+                    for (let e = -1; e <= 1; e += 2) {
+                        const earGeo = new THREE.CylinderGeometry(0.05, 0.07, 0.32, 8);
+                        const earMat = new THREE.MeshLambertMaterial({color: 0xf5f5dc});
+                        const ear = new THREE.Mesh(earGeo, earMat);
+                        ear.position.set(e * 0.08, 0.42, 0.18);
+                        ear.rotation.x = Math.PI / 2.2;
+                        rabbit.add(ear);
+                    }
+                    rabbit.position.set(Math.random() * 10 - 5, 0.2, Math.random() * 10 - 5);
+                    scene.add(rabbit);
+                    animals.push({
+                        mesh: rabbit,
+                        type: 'rabbit',
+                        baseY: rabbit.position.y,
+                        phase: Math.random() * Math.PI * 2
+                    });
                 }
             }
         }
-        // Animals: add birds and rabbits, animate them
-        const animalCount = Math.max(0, Math.floor(score / 30) - Math.floor(parseFloat(document.getElementById("carbon-footprint")?.textContent || "0") / 50));
-        const animals = [];
-        for (let i = 0; i < animalCount; i++) {
-            if (Math.random() < 0.5) {
-                // Bird (sphere body, cone beak, wings)
-                const bird = new THREE.Group();
-                const bodyGeo = new THREE.SphereGeometry(0.25, 8, 8);
-                const bodyMat = new THREE.MeshLambertMaterial({color: 0x2196f3});
-                const body = new THREE.Mesh(bodyGeo, bodyMat);
-                bird.add(body);
-                const beakGeo = new THREE.ConeGeometry(0.08, 0.18, 8);
-                const beakMat = new THREE.MeshLambertMaterial({color: 0xffa726});
-                const beak = new THREE.Mesh(beakGeo, beakMat);
-                beak.position.set(0, 0, 0.28);
-                beak.rotation.x = Math.PI / 2;
-                bird.add(beak);
-                // Wings
-                for (let w = -1; w <= 1; w += 2) {
-                    const wingGeo = new THREE.BoxGeometry(0.18, 0.05, 0.5);
-                    const wingMat = new THREE.MeshLambertMaterial({color: 0x1976d2});
-                    const wing = new THREE.Mesh(wingGeo, wingMat);
-                    wing.position.set(w * 0.22, 0, 0);
-                    wing.rotation.z = w * 0.3;
-                    bird.add(wing);
-                }
-                bird.position.set(Math.random() * 10 - 5, 2.5 + Math.random() * 2, Math.random() * 10 - 5);
-                scene.add(bird);
-                animals.push({mesh: bird, type: 'bird', baseY: bird.position.y, phase: Math.random() * Math.PI * 2});
-            } else {
-                // Rabbit (body, head, ears)
-                const rabbit = new THREE.Group();
-                const bodyGeo = new THREE.SphereGeometry(0.28, 10, 10);
-                const bodyMat = new THREE.MeshLambertMaterial({color: 0xf5f5dc});
-                const body = new THREE.Mesh(bodyGeo, bodyMat);
-                rabbit.add(body);
-                const headGeo = new THREE.SphereGeometry(0.18, 10, 10);
-                const head = new THREE.Mesh(headGeo, bodyMat);
-                head.position.set(0, 0.22, 0.18);
-                rabbit.add(head);
-                // Ears
-                for (let e = -1; e <= 1; e += 2) {
-                    const earGeo = new THREE.CylinderGeometry(0.05, 0.07, 0.32, 8);
-                    const earMat = new THREE.MeshLambertMaterial({color: 0xf5f5dc});
-                    const ear = new THREE.Mesh(earGeo, earMat);
-                    ear.position.set(e * 0.08, 0.42, 0.18);
-                    ear.rotation.x = Math.PI / 2.2;
-                    rabbit.add(ear);
-                }
-                rabbit.position.set(Math.random() * 10 - 5, 0.2, Math.random() * 10 - 5);
-                scene.add(rabbit);
-                animals.push({
-                    mesh: rabbit,
-                    type: 'rabbit',
-                    baseY: rabbit.position.y,
-                    phase: Math.random() * Math.PI * 2
-                });
-            }
-        }
-        // --- More land details ---
-        // Bushes (green spheres)
-        for (let i = 0; i < 7; i++) {
-            const bushGeo = new THREE.SphereGeometry(0.6 + Math.random() * 0.3, 12, 12);
-            const bushMat = new THREE.MeshLambertMaterial({color: 0x2e7d32 + Math.floor(Math.random() * 0x1000)});
-            const bush = new THREE.Mesh(bushGeo, bushMat);
-            const angle = Math.random() * Math.PI * 2;
-            const r = 7 + Math.random() * 7;
-            bush.position.set(Math.cos(angle) * r, -0.5, Math.sin(angle) * r);
-            scene.add(bush);
-        }
-        // Small logs (brown cylinders)
-        for (let i = 0; i < 4; i++) {
-            const logGeo = new THREE.CylinderGeometry(0.18, 0.22, 1.2 + Math.random() * 0.7, 10);
-            const logMat = new THREE.MeshLambertMaterial({color: 0x8b5a2b});
-            const log = new THREE.Mesh(logGeo, logMat);
-            const angle = Math.random() * Math.PI * 2;
-            const r = 6 + Math.random() * 8;
-            log.position.set(Math.cos(angle) * r, -0.6, Math.sin(angle) * r);
-            log.rotation.z = Math.random() * Math.PI * 2;
-            scene.add(log);
-        }
-        // Flower patches (clusters of small colored spheres)
-        const flowerColors = [0xffc0cb, 0xffe066, 0x8ecae6, 0xf08080, 0xb5e48c];
-        for (let i = 0; i < 5; i++) {
-            const patchAngle = Math.random() * Math.PI * 2;
-            const patchR = 5 + Math.random() * 8;
-            for (let j = 0; j < 5 + Math.floor(Math.random() * 4); j++) {
-                const flowerGeo = new THREE.SphereGeometry(0.11 + Math.random() * 0.04, 8, 8);
-                const flowerMat = new THREE.MeshLambertMaterial({color: flowerColors[Math.floor(Math.random() * flowerColors.length)]});
-                const flower = new THREE.Mesh(flowerGeo, flowerMat);
-                const offsetA = patchAngle + (Math.random() - 0.5) * 0.5;
-                const offsetR = patchR + (Math.random() - 0.5) * 1.2;
-                flower.position.set(Math.cos(offsetA) * offsetR, -0.4, Math.sin(offsetA) * offsetR);
-                scene.add(flower);
-            }
-        }
+
 
         // Animate
         function animate(time) {
             requestAnimationFrame(animate);
-            // Animate animals
-            animals.forEach(obj => {
-                if (obj.type === 'bird') {
-                    obj.mesh.position.y = obj.baseY + Math.sin(time / 400 + obj.phase) * 0.3;
-                    obj.mesh.position.x += Math.sin(time / 1000 + obj.phase) * 0.01;
-                    obj.mesh.position.z += Math.cos(time / 1000 + obj.phase) * 0.01;
-                } else if (obj.type === 'rabbit') {
-                    obj.mesh.position.y = obj.baseY + Math.abs(Math.sin(time / 500 + obj.phase)) * 0.15;
-                }
-            });
+
+            // Animation logic will only affect animals if they exist
+            if (typeof animals !== 'undefined' && animals.length > 0) {
+                animals.forEach(obj => {
+                    if (obj.type === 'bird') {
+                        obj.mesh.position.y = obj.baseY + Math.sin(time / 400 + obj.phase) * 0.3;
+                        obj.mesh.position.x += Math.sin(time / 1000 + obj.phase) * 0.01;
+                        obj.mesh.position.z += Math.cos(time / 1000 + obj.phase) * 0.01;
+                    } else if (obj.type === 'rabbit') {
+                        obj.mesh.position.y = obj.baseY + Math.abs(Math.sin(time / 500 + obj.phase)) * 0.15;
+                    }
+                });
+            }
+
             renderer.render(scene, camera);
         }
 

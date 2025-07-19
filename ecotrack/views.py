@@ -153,6 +153,7 @@ def get_user_data(request):
         "carbon_footprint": request.user.carbon_footprint,
         "sustainability_score": request.user.sustainability_score,
         "habits": request.user.habits,
+        "habit_checked_date": request.user.last_checkin,
     }})
 
 
@@ -226,12 +227,33 @@ def submit_questionnaire(request):
 
 @login_required
 def get_suggestions(request):
+    sample_suggestions = [
+        {
+            "title": "Reduce Meat Consumption",
+            "reason":
+                "Producing meat requires significant resources. Opting for plant-based meals reduces your environmental impact.",
+            "carbonReduction": "5-10 kg CO2e/month",
+        },
+        {
+            "title": "Switch to LED Light Bulbs",
+            "reason":
+                "LEDs consume up to 85% less electricity than incandescent bulbs, lowering your carbon emissions and energy bills.",
+            "carbonReduction": "3-5 kg CO2e/month",
+        },
+        {
+            "title": "Compost Food Waste",
+            "reason":
+                "Composting diverts food from landfills, where it produces methane, a potent greenhouse gas.",
+            "carbonReduction": "2-4 kg CO2e/month",
+        },
+    ]
+
     return JsonResponse({'status': 'success', 'data': "Hello, world"})
     client = genai.Client()
 
     response = client.models.generate_content(
         model="gemini-2.5-flash",
-        contents="Give me a few suggestions of habit to perform to reduce carbon footprint. Give the output in json format:{habit_title:title, description:description, expected_carbon_footprint_reduction: value}",
+        contents=f"Give me a few suggestions of habit to perform to reduce carbon footprint. Give the output in json format. Here are some examples: {sample_suggestions}",
     )
     print(response.text)
     return JsonResponse({'status': 'success', 'data': response.text})
