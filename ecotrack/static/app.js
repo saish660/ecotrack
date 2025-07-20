@@ -337,27 +337,7 @@ class EcoTrackApp {
                 }
             });
         });
-        // Also handle dashboard shortcut card for check-in
-        const dashboardCheckinShortcut = document.getElementById(
-            "dashboard-checkin-shortcut"
-        );
-        if (dashboardCheckinShortcut) {
-            const btn = dashboardCheckinShortcut.querySelector(
-                "button[data-tab='checkin']"
-            );
-            if (btn) {
-                btn.addEventListener("click", () => {
-                    navItems.forEach((nav) => nav.classList.remove("active"));
-                    tabContents.forEach((content) => content.classList.remove("active"));
-                    document
-                        .querySelector(".nav-item[data-tab='checkin']")
-                        .classList.add("active");
-                    document.getElementById("checkin").classList.add("active");
-                    this.renderDailyQuestionnaire();
-                    this.initializeQuestionnaireProgress();
-                });
-            }
-        }
+
         // Also handle profile preview "View All Badges" button
         const viewAllBadgesBtn = document.querySelector(
             "button[data-tab='all-achievements']"
@@ -567,7 +547,7 @@ class EcoTrackApp {
                 const optionLabel = document.createElement("label");
                 optionLabel.className = "option-card";
                 optionLabel.innerHTML = `
-                    <input type="radio" name="${q.id}" value="${option.value}" required>
+                    <input type="radio" name="${q.id}" value="${[option.question, option.value]}" required>
                     <div class="option-content">
                         <span>${option.text}</span>
                     </div>
@@ -750,7 +730,7 @@ class EcoTrackApp {
                 document.getElementById(target).classList.add("active");
                 // Special case: if going back to dashboard, re-render ecosystem and habits
                 if (target === "dashboard") {
-                    this.initializeEcosystemVisualization();
+                    this.initializeEcosystem3D();
                     this.initializeDailyHabitChecklist();
                 }
                 if (target === "profile") {
