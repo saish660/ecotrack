@@ -906,8 +906,8 @@ main {
 .legend-item {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
+  gap: 4px;
+  font-size: 0.8rem;
   color: var(--text-color-secondary);
 }
 

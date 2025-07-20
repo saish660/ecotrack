@@ -1,100 +1,101 @@
 {% load static %}
+{% load tz %}
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>EcoTrack - Redesigned</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap"
+            rel="stylesheet"
     />
-    <link rel="stylesheet" href="{% static 'styles.css' %}" />
+    <link rel="stylesheet" href="{% static 'styles.css' %}"/>
     <script src="https://cdn.jsdelivr.net/npm/three@0.153.0/build/three.min.js"></script>
-  </head>
-  <body>
-    <!-- Header -->
-    <header class="app-header">
-      <h1>EcoTrack</h1>
-    </header>
+</head>
+<body>
+<!-- Header -->
+<header class="app-header">
+    <h1>EcoTrack</h1>
+</header>
 
-    <!-- Main Content Area -->
-    <main>
-      <!-- Dashboard Tab -->
-      <section id="dashboard" class="tab-content active">
+<!-- Main Content Area -->
+<main>
+    <!-- Dashboard Tab -->
+    <section id="dashboard" class="tab-content active">
         <div class="card">
-          <div class="overview-header">
-            <div class="score-circle-container">
-              <svg
-                class="w-full h-full"
-                viewBox="0 0 100 100"
-                style="transform: rotate(-90deg)"
-              >
-                <circle
-                  stroke="#e5e7eb"
-                  stroke-width="10"
-                  cx="50"
-                  cy="50"
-                  r="45"
-                  fill="transparent"
-                ></circle>
-                <circle
-                  id="score-circle"
-                  stroke="var(--primary-color)"
-                  stroke-width="10"
-                  cx="50"
-                  cy="50"
-                  r="45"
-                  fill="transparent"
-                  stroke-dasharray="282.6"
-                  stroke-dashoffset="282.6"
-                  style="transition: stroke-dashoffset 0.8s ease-out"
-                ></circle>
-              </svg>
-              <span id="sustainability-score">0</span>
+            <div class="overview-header">
+                <div class="score-circle-container">
+                    <svg
+                            class="w-full h-full"
+                            viewBox="0 0 100 100"
+                            style="transform: rotate(-90deg)"
+                    >
+                        <circle
+                                stroke="#e5e7eb"
+                                stroke-width="10"
+                                cx="50"
+                                cy="50"
+                                r="45"
+                                fill="transparent"
+                        ></circle>
+                        <circle
+                                id="score-circle"
+                                stroke="var(--primary-color)"
+                                stroke-width="10"
+                                cx="50"
+                                cy="50"
+                                r="45"
+                                fill="transparent"
+                                stroke-dasharray="282.6"
+                                stroke-dashoffset="282.6"
+                                style="transition: stroke-dashoffset 0.8s ease-out"
+                        ></circle>
+                    </svg>
+                    <span id="sustainability-score">0</span>
+                </div>
+                <p class="score-label">Sustainability Score</p>
             </div>
-            <p class="score-label">Sustainability Score</p>
-          </div>
-          <div class="stats-grid">
-            <div class="stat-item">
-              <p class="label">Carbon Footprint</p>
-              <p id="carbon-footprint" class="value">0 kg</p>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <p class="label">Carbon Footprint</p>
+                    <p id="carbon-footprint" class="value">0 kg</p>
+                </div>
+                <div class="stat-item">
+                    <p class="label">Habits Today</p>
+                    <p id="habits-completed-today" class="value">0</p>
+                </div>
+                <div class="stat-item streak-item">
+                    <p class="label">🔥 Streak</p>
+                    <p id="streak-count" class="value">0 days</p>
+                </div>
             </div>
-            <div class="stat-item">
-              <p class="label">Habits Today</p>
-              <p id="habits-completed-today" class="value">0</p>
-            </div>
-            <div class="stat-item streak-item">
-              <p class="label">🔥 Streak</p>
-              <p id="streak-count" class="value">0 days</p>
-            </div>
-          </div>
         </div>
         <div
-          class="card dashboard-shortcut-card"
-          id="dashboard-checkin-shortcut"
+                class="card dashboard-shortcut-card"
+                id="dashboard-checkin-shortcut"
         >
-          <h2 class="card-title">🌱 Daily Eco-Check-in</h2>
-          <p>
-            Complete your daily eco-check-in to track your habits and earn
-            rewards!
-          </p>
-          <button
-            class="btn btn-primary"
-            style="margin-top: 1rem"
-            data-tab="checkin"
-          >
-            Check-in
-          </button>
+            <h2 class="card-title">🌱 Daily Eco-Check-in</h2>
+            <p>
+                Complete your daily eco-check-in to track your habits and earn
+                rewards!
+            </p>
+            <button
+                    class="btn btn-primary"
+                    style="margin-top: 1rem"
+                    data-tab="checkin"
+            >
+                Check-in
+            </button>
         </div>
         <!-- AI Ecosystem Visualization Section -->
         <div class="card" id="ecosystem-visualization-card">
-          <h2 class="card-title">🌳 Your Ecosystem Patch</h2>
-          <div
-            id="ecosystem-visualization-container"
-            style="
+            <h2 class="card-title">🌳 Your Ecosystem Patch</h2>
+            <div
+                    id="ecosystem-visualization-container"
+                    style="
               width: 100%;
               height: 300px;
               display: flex;
@@ -105,326 +106,305 @@
               overflow: hidden;
               margin-bottom: 1rem;
             "
-          >
-            <div id="ecosystem3d" style="width: 100%; height: 300px"></div>
-          </div>
-          <p
-            style="
+            >
+                <div id="ecosystem3d" style="width: 100%; height: 300px"></div>
+            </div>
+            <p
+                    style="
               font-size: 0.95rem;
               color: var(--text-color-secondary);
               margin-bottom: 0;
             "
-          >
-            This patch of land evolves as your sustainability improves!
-          </p>
+            >
+                This patch of land evolves as your sustainability improves!
+            </p>
         </div>
         <!-- Daily Habit Checklist Section -->
         <div class="card" id="daily-habit-checklist-card">
-          <h2 class="card-title">Daily Habit Checklist</h2>
-          <form id="daily-habit-checklist-form">
-            <ul id="dashboard-habit-list" class="habit-list"></ul>
-            <button
-              id="submit-habit-checklist"
-              class="btn btn-primary"
-              type="submit"
-              style="margin-top: 1rem"
-            >
-              Submit Today's Habits
-            </button>
-          </form>
-          <div id="habit-checklist-status-message" class="hidden">
-            <div class="completion-celebration">
-              <div class="celebration-icon">🎉</div>
-              <p>You've submitted your daily habits! Come back tomorrow.</p>
+            <h2 class="card-title">Daily Habit Checklist</h2>
+            <form id="daily-habit-checklist-form">
+                <ul id="dashboard-habit-list" class="habit-list"></ul>
+                <button
+                        id="submit-habit-checklist"
+                        class="btn btn-primary"
+                        type="submit"
+                        style="margin-top: 1rem"
+                >
+                    Submit Today's Habits
+                </button>
+            </form>
+            <div id="habit-checklist-status-message" class="hidden">
+                <div class="completion-celebration">
+                    <div class="celebration-icon">🎉</div>
+                    <p>You've submitted your daily habits! Come back tomorrow.</p>
+                </div>
             </div>
-          </div>
         </div>
         <!-- Shortcut card to Check-in page -->
-      </section>
+    </section>
 
-      <!-- Habits Tab -->
-      <section id="habits" class="tab-content">
+    <!-- Habits Tab -->
+    <section id="habits" class="tab-content">
         <div class="card">
-          <h2 class="card-title">Create a New Eco Habit</h2>
-          <div
-            style="
+            <h2 class="card-title">Create a New Eco Habit</h2>
+            <div
+                    style="
               display: flex;
               flex-direction: column;
               gap: 0.5rem;
               margin-bottom: 1rem;
             "
-          >
-            <input
-              id="habit-input"
-              class="add-habit-input"
-              type="text"
-              placeholder="Enter a new habit..."
-              autocomplete="off"
-              style="width: 100%; box-sizing: border-box"
-            />
-            <button
-              id="habit-add-btn"
-              class="btn btn-primary"
-              style="width: 100%; min-width: 0"
             >
-              Add
-            </button>
-          </div>
-          <ul id="habit-items-list" class="habit-list"></ul>
+                <input
+                        id="habit-input"
+                        class="add-habit-input"
+                        type="text"
+                        placeholder="Enter a new habit..."
+                        autocomplete="off"
+                        style="width: 100%; box-sizing: border-box"
+                />
+                <button
+                        id="habit-add-btn"
+                        class="btn btn-primary"
+                        style="width: 100%; min-width: 0"
+                >
+                    Add
+                </button>
+            </div>
+            <ul id="habit-items-list" class="habit-list"></ul>
         </div>
-      </section>
+    </section>
 
-      <!-- Suggestions Tab -->
-      <section id="suggestions" class="tab-content">
+    <!-- Suggestions Tab -->
+    <section id="suggestions" class="tab-content">
         <h2
-          class="card-title"
-          style="padding-left: 0.5rem; margin-bottom: 1.5rem"
+                class="card-title"
+                style="padding-left: 0.5rem; margin-bottom: 1.5rem"
         >
-          Personalized Suggestions
+            Personalized Suggestions
         </h2>
         <div id="suggestion-cards-container">
 
         </div>
-      </section>
+    </section>
 
-      <!-- Profile Tab -->
-      <section id="profile" class="tab-content">
+    <!-- Profile Tab -->
+    <section id="profile" class="tab-content">
         <div class="card profile-card">
-          <h2 class="card-title">Profile</h2>
-          <div class="profile-avatar">U</div>
-          <p style="font-size: 1.25rem; font-weight: 600">EcoUser</p>
-          <p style="color: var(--text-color-secondary); margin-bottom: 1.5rem">
-            Joined: July 2025
-          </p>
-          <button
-            class="btn"
-            style="background-color: var(--danger-color); color: white"
-          >
-            Logout
-          </button>
+            <h2 class="card-title">Profile</h2>
+            <div class="profile-avatar">U</div>
+            <p style="font-size: 1.25rem; font-weight: 600">{{ request.user.username }}</p>
+            <p style="color: var(--text-color-secondary); margin-bottom: 1.5rem">
+                Joined: {{ request.user.date_joined|localtime }}
+            </p>
+            <button
+                    class="btn"
+                    style="background-color: var(--danger-color); color: white"
+                    onclick="logout()"
+            >
+                Logout
+            </button>
         </div>
 
         <!-- Carbon footprint prediction graph -->
         <div class="card">
-          <h2 class="card-title">Weekly Carbon Footprint</h2>
-          <div class="carbon-graph-container">
-            <canvas id="carbonGraph" width="400" height="200"></canvas>
-            <div class="graph-legend">
-              <div class="legend-item">
-                <span
-                  class="legend-color"
-                  style="background: var(--primary-color)"
-                ></span>
-                <span>This Week</span>
-              </div>
-              <div class="legend-item">
-                <span
-                  class="legend-color"
-                  style="background: var(--secondary-color)"
-                ></span>
-                <span>Last Week</span>
-              </div>
+            <h2 class="card-title">Monthly Carbon Footprint</h2>
+            <div class="carbon-graph-container">
+                <canvas id="carbonGraph" width="400" height="200"></canvas>
+                <div class="graph-legend">
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #3b82f6"></span>
+                        <span>Last Month</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #22c55e"></span>
+                        <span>This Month</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #f59e0b"></span>
+                        <span>Next Month</span>
+                    </div>
+                </div>
             </div>
-          </div>
         </div>
         <!-- Show only a few badges here -->
         <div class="card">
-          <h2 class="card-title">Achievements</h2>
-          <div id="profile-achievements-preview" class="achievements-grid">
-            <!-- Only a few achievements will be shown here by JS -->
-          </div>
-          <button class="btn btn-secondary" data-tab="all-achievements">
-            View All Badges
-          </button>
+            <h2 class="card-title">Achievements</h2>
+            <div id="profile-achievements-preview" class="achievements-grid">
+                <!-- Only a few achievements will be shown here by JS -->
+            </div>
+            <button class="btn btn-secondary" data-tab="all-achievements">
+                View All Badges
+            </button>
         </div>
-      </section>
+    </section>
 
-      <!-- Check-in Tab (new) -->
-      <section id="checkin" class="tab-content">
+    <!-- Check-in Tab (new) -->
+    <section id="checkin" class="tab-content">
         <button
-          class="btn btn-secondary go-back-btn"
-          style="margin-bottom: 1rem"
-          data-go-back="dashboard"
+                class="btn btn-secondary go-back-btn"
+                style="margin-bottom: 1rem"
+                data-go-back="dashboard"
         >
-          ← Go Back
+            ← Go Back
         </button>
         <div class="card">
-          <h2 class="card-title">🌱 Daily Eco-Check-in</h2>
-          <div class="questionnaire-progress sticky-progress">
-            <div class="progress-bar">
-              <div class="progress-fill" id="questionnaire-progress"></div>
+            <h2 class="card-title">🌱 Daily Eco-Check-in</h2>
+            <div class="questionnaire-progress sticky-progress">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="questionnaire-progress"></div>
+                </div>
+                <span class="progress-text" id="progress-text"
+                >0/3 questions answered</span
+                >
             </div>
-            <span class="progress-text" id="progress-text"
-              >0/3 questions answered</span
-            >
-          </div>
-          <form
-            id="daily-questionnaire-form"
-            class="daily-questionnaire-form"
-          ></form>
-          <div id="form-status-message" class="hidden">
-            <div class="completion-celebration">
-              <div class="celebration-icon">🎉</div>
-              <p>You've completed today's eco-check-in! Come back tomorrow.</p>
+            <form
+                    id="daily-questionnaire-form"
+                    class="daily-questionnaire-form"
+            ></form>
+            <div id="form-status-message" class="hidden">
+                <div class="completion-celebration">
+                    <div class="celebration-icon">🎉</div>
+                    <p>You've completed today's eco-check-in! Come back tomorrow.</p>
+                </div>
             </div>
-          </div>
         </div>
-      </section>
+    </section>
 
-      <!-- All Achievements Tab (new) -->
-      <section id="all-achievements" class="tab-content">
+    <!-- All Achievements Tab (new) -->
+    <section id="all-achievements" class="tab-content">
         <button
-          class="btn btn-secondary go-back-btn"
-          style="margin-bottom: 1rem"
-          data-go-back="profile"
+                class="btn btn-secondary go-back-btn"
+                style="margin-bottom: 1rem"
+                data-go-back="profile"
         >
-          ← Go Back
+            ← Go Back
         </button>
         <div class="card">
-          <h2 class="card-title">🏆 All Achievements</h2>
-          <div id="achievements-container" class="achievements-grid">
-            <!-- All achievements will be populated here by JS -->
-          </div>
+            <h2 class="card-title">🏆 All Achievements</h2>
+            <div id="achievements-container" class="achievements-grid">
+                <!-- All achievements will be populated here by JS -->
+            </div>
         </div>
-      </section>
-    </main>
+    </section>
+</main>
 
-    <!-- Bottom Navigation Bar -->
-    <nav class="bottom-nav">
-      <button class="nav-item active" data-tab="dashboard">
+<!-- Bottom Navigation Bar -->
+<nav class="bottom-nav">
+    <button class="nav-item active" data-tab="dashboard">
         <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke-width="1.5"
-          stroke="currentColor"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
         >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h7.5"
-          />
+            <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h7.5"
+            />
         </svg>
         <span>Dashboard</span>
-      </button>
-      <button class="nav-item" data-tab="habits">
+    </button>
+    <button class="nav-item" data-tab="habits">
         <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke-width="1.5"
-          stroke="currentColor"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
         >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
+            <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
         </svg>
         <span>Habits</span>
-      </button>
-      <button class="nav-item" data-tab="suggestions">
+    </button>
+    <button class="nav-item" data-tab="suggestions">
         <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke-width="1.5"
-          stroke="currentColor"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
         >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.354a15.056 15.056 0 01-4.5 0m3.75-12.454c0-1.193.255-2.326.72-3.354m-1.44 3.354c-.465 1.028-.72 2.161-.72 3.354m0 0a9.037 9.037 0 014.5 0m-4.5 0a9.037 9.037 0 00-4.5 0m9.037 9.037a9.037 9.037 0 01-4.5 0m4.5 0a9.037 9.037 0 004.5 0m-9.037-9.037c0-1.193.255-2.326.72-3.354m-1.44 3.354c-.465 1.028-.72 2.161-.72 3.354"
-          />
+            <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.354a15.056 15.056 0 01-4.5 0m3.75-12.454c0-1.193.255-2.326.72-3.354m-1.44 3.354c-.465 1.028-.72 2.161-.72 3.354m0 0a9.037 9.037 0 014.5 0m-4.5 0a9.037 9.037 0 00-4.5 0m9.037 9.037a9.037 9.037 0 01-4.5 0m4.5 0a9.037 9.037 0 004.5 0m-9.037-9.037c0-1.193.255-2.326.72-3.354m-1.44 3.354c-.465 1.028-.72 2.161-.72 3.354"
+            />
         </svg>
         <span>Ideas</span>
-      </button>
-      <button class="nav-item" data-tab="profile">
+    </button>
+    <button class="nav-item" data-tab="profile">
         <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke-width="1.5"
-          stroke="currentColor"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
         >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"
-          />
+            <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"
+            />
         </svg>
         <span>Profile</span>
-      </button>
-    </nav>
+    </button>
+</nav>
 
-    <!-- Modals (Initially hidden) -->
-    <div id="custom-message-box" class="modal-overlay hidden">
-      <div class="modal-panel" style="text-align: center">
+<!-- Modals (Initially hidden) -->
+<div id="custom-message-box" class="modal-overlay hidden">
+    <div class="modal-panel" style="text-align: center">
         <p
-          id="message-box-text"
-          style="font-size: 1.125rem; margin-bottom: 1.5rem"
+                id="message-box-text"
+                style="font-size: 1.125rem; margin-bottom: 1.5rem"
         ></p>
         <button id="message-box-ok" class="btn btn-primary">OK</button>
-      </div>
     </div>
+</div>
 
-    <!-- Modals (Initially hidden) -->
-    <div id="add-habit-modal" class="modal-overlay hidden">
-      <!-- ... modal content ... -->
-    </div>
-    <div id="custom-message-box" class="modal-overlay hidden">
-      <!-- ... modal content ... -->
-    </div>
-    <script src="{% static 'app.js' %}"></script>
-    <script src="{% static 'api.js' %}"></script>
-    <script src="{% static 'script.js' %}"></script>
-    <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        if (typeof EcoTrackApp === "function") {
-          // If using app.js class, re-initialize ecosystem after dashboard loads
-          setTimeout(function () {
-            if (
-              typeof window.app !== "undefined" &&
-              window.app.initializeEcosystem3D
-            ) {
-              window.app.initializeEcosystem3D();
-            } else if (
-              typeof EcoTrackApp.prototype.initializeEcosystem3D === "function"
-            ) {
-              // Fallback: create a temp instance just to call the method
-              new EcoTrackApp().initializeEcosystem3D();
-            }
-          }, 500);
-        }
-      });
-    </script>
-    <script>
-      document.addEventListener("click", function (e) {
+<!-- Modals (Initially hidden) -->
+<div id="add-habit-modal" class="modal-overlay hidden">
+    <!-- ... modal content ... -->
+</div>
+<div id="custom-message-box" class="modal-overlay hidden">
+    <!-- ... modal content ... -->
+</div>
+<script src="{% static 'app.js' %}"></script>
+<script src="{% static 'api.js' %}"></script>
+<script src="{% static 'script.js' %}"></script>
+<script>
+    document.addEventListener("click", function (e) {
         const btn = e.target.closest("button[data-tab]");
         if (btn && !btn.classList.contains("nav-item")) {
-          const tab = btn.getAttribute("data-tab");
-          // Deactivate all nav and tab-content
-          document
-            .querySelectorAll(".nav-item")
-            .forEach((nav) => nav.classList.remove("active"));
-          document
-            .querySelectorAll(".tab-content")
-            .forEach((tabC) => tabC.classList.remove("active"));
-          // Activate the correct nav and tab-content
-          document
-            .querySelector(`.nav-item[data-tab='${tab}']`)
-            ?.classList.add("active");
-          document.getElementById(tab)?.classList.add("active");
-          // Special logic for checkin and all-achievements
-          if (window.app && tab === "checkin") {
-            window.app.renderDailyQuestionnaire();
-            window.app.initializeQuestionnaireProgress();
-          }
-          if (window.app && tab === "all-achievements") {
-            window.app.loadAchievements();
-          }
+            const tab = btn.getAttribute("data-tab");
+            // Deactivate all nav and tab-content
+            document
+                .querySelectorAll(".nav-item")
+                .forEach((nav) => nav.classList.remove("active"));
+            document
+                .querySelectorAll(".tab-content")
+                .forEach((tabC) => tabC.classList.remove("active"));
+            // Activate the correct nav and tab-content
+            document
+                .querySelector(`.nav-item[data-tab='${tab}']`)
+                ?.classList.add("active");
+            document.getElementById(tab)?.classList.add("active");
+            // Special logic for checkin and all-achievements
+            if (window.app && tab === "checkin") {
+                window.app.renderDailyQuestionnaire();
+                window.app.initializeQuestionnaireProgress();
+            }
+            if (window.app && tab === "all-achievements") {
+                window.app.loadAchievements();
+            }
         }
-      });
-    </script>
-  </body>
+    });
+</script>
+</body>
 </html>

@@ -390,7 +390,6 @@ class EcoTrackApp {
     renderCarbonGraph() {
         const canvas = document.getElementById("carbonGraph");
         if (!canvas) return;
-
         const ctx = canvas.getContext("2d");
         const width = canvas.width;
         const height = canvas.height;
@@ -398,22 +397,39 @@ class EcoTrackApp {
         // Clear canvas
         ctx.clearRect(0, 0, width, height);
 
-        // Sample data for the week (in kg CO2)
-        const thisWeekData = [12.5, 15.2, 8.7, 11.3, 9.8, 13.1, 10.5];
-        const lastWeekData = [14.2, 16.8, 12.1, 13.5, 11.9, 15.3, 12.8];
-        const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+        // Sample data for the month (weekly totals in kg CO2)
+        const lastMonthData = [75.5, 82.1, 78.9, 85.3]; // 4 weeks of data
+        const thisMonthData = [85.2, 88.8, 81.1, 90.5]; // 4 weeks of data
+        // Generate prediction using trend-based linear forecasting
+        const nextMonthPrediction = thisMonthData.map((current, i) => {
+            const trend = current - lastMonthData[i]; // Calculate week-over-week trend
+            const predicted = current + trend; // Project trend forward
+            // Optional: Add some bounds to keep predictions realistic
+            return Math.max(50, Math.min(120, predicted)); // Cap between 50-120 kg CO2
+        });
+        const weeks = ["Week 1", "Week 2", "Week 3", "Week 4"];
 
         // Chart dimensions
-        const padding = 40;
+        const padding = 60; // Increased padding to accommodate labels
         const chartWidth = width - 2 * padding;
         const chartHeight = height - 2 * padding;
-        const maxValue = Math.max(...thisWeekData, ...lastWeekData);
+        const maxValue = Math.max(...thisMonthData, ...lastMonthData, ...nextMonthPrediction);
+        const minValue = Math.min(...thisMonthData, ...lastMonthData, ...nextMonthPrediction);
+
+        // Create a nice range with some padding
+        const valueRange = maxValue - minValue;
+        const paddedMax = maxValue + (valueRange * 0.1); // Add 10% padding at top
+        const paddedMin = Math.max(0, minValue - (valueRange * 0.1)); // Add 10% padding at bottom, but don't go below 0
+        const totalRange = paddedMax - paddedMin;
+
+        // Number of grid lines/labels
+        const gridLines = 5;
 
         // Draw grid lines
         ctx.strokeStyle = "#e2e8f0";
         ctx.lineWidth = 1;
-        for (let i = 0; i <= 5; i++) {
-            const y = padding + (chartHeight / 5) * i;
+        for (let i = 0; i <= gridLines; i++) {
+            const y = padding + (chartHeight / gridLines) * i;
             ctx.beginPath();
             ctx.moveTo(padding, y);
             ctx.lineTo(width - padding, y);
@@ -421,16 +437,25 @@ class EcoTrackApp {
         }
 
         // Helper function to draw line
-        const drawLine = (data, color, lineWidth = 3) => {
+        const drawLine = (data, color, lineWidth = 3, isDotted = false) => {
             ctx.strokeStyle = color;
             ctx.lineWidth = lineWidth;
             ctx.lineCap = "round";
             ctx.lineJoin = "round";
 
+            // Set line dash for dotted lines
+            if (isDotted) {
+                ctx.setLineDash([8, 5]); // 8px dash, 5px gap
+            } else {
+                ctx.setLineDash([]); // Solid line
+            }
+
             ctx.beginPath();
+
             data.forEach((value, index) => {
                 const x = padding + (chartWidth / (data.length - 1)) * index;
-                const y = height - padding - (value / maxValue) * chartHeight;
+                // Fix: Use the padded range for proper scaling
+                const y = height - padding - ((value - paddedMin) / totalRange) * chartHeight;
 
                 if (index === 0) {
                     ctx.moveTo(x, y);
@@ -439,6 +464,9 @@ class EcoTrackApp {
                 }
             });
             ctx.stroke();
+
+            // Reset line dash after drawing
+            ctx.setLineDash([]);
         };
 
         // Draw data points
@@ -446,7 +474,8 @@ class EcoTrackApp {
             ctx.fillStyle = color;
             data.forEach((value, index) => {
                 const x = padding + (chartWidth / (data.length - 1)) * index;
-                const y = height - padding - (value / maxValue) * chartHeight;
+                // Fix: Use the padded range for proper scaling
+                const y = height - padding - ((value - paddedMin) / totalRange) * chartHeight;
 
                 ctx.beginPath();
                 ctx.arc(x, y, 4, 0, 2 * Math.PI);
@@ -455,27 +484,34 @@ class EcoTrackApp {
         };
 
         // Draw lines
-        drawLine(lastWeekData, "#3b82f6", 2);
-        drawLine(thisWeekData, "#22c55e", 3);
+        drawLine(lastMonthData, "#3b82f6", 2);
+        drawLine(thisMonthData, "#22c55e", 3);
+        drawLine(nextMonthPrediction, "#f59e0b", 2, true); // Orange dotted line for prediction
 
         // Draw points
-        drawPoints(lastWeekData, "#3b82f6");
-        drawPoints(thisWeekData, "#22c55e");
+        drawPoints(lastMonthData, "#3b82f6");
+        drawPoints(thisMonthData, "#22c55e");
+        drawPoints(nextMonthPrediction, "#f59e0b");
 
-        // Draw day labels
+        // Draw week labels
         ctx.fillStyle = "#222";
         ctx.font = "12px Outfit";
         ctx.textAlign = "center";
-        days.forEach((day, index) => {
-            const x = padding + (chartWidth / (days.length - 1)) * index;
-            ctx.fillText(day, x, height - 10);
+        weeks.forEach((week, index) => {
+            const x = padding + (chartWidth / (weeks.length - 1)) * index;
+            ctx.fillText(week, x, height - 10);
         });
 
-        // Draw value labels on the left
+        // Fix: Draw value labels on the left with correct values
         ctx.textAlign = "right";
-        for (let i = 0; i <= 5; i++) {
-            const value = (maxValue / 5) * (5 - i);
-            const y = padding + (chartHeight / 5) * i + 4;
+        ctx.fillStyle = "#666";
+        ctx.font = "11px Outfit";
+
+        for (let i = 0; i <= gridLines; i++) {
+            // Calculate the actual value for this grid line
+            const value = paddedMax - (totalRange / gridLines) * i;
+            const y = padding + (chartHeight / gridLines) * i + 4; // +4 for better vertical alignment
+
             ctx.fillText(`${value.toFixed(1)}kg`, padding - 10, y);
         }
     }
@@ -578,31 +614,12 @@ class EcoTrackApp {
                 return response.json();
             })
             .then(data => {
-                return data;
+                return data.data;
             })
 
         console.log(generatedSuggestions);
 
-        const suggestions = [
-            {
-                title: "Reduce Meat Consumption",
-                reason:
-                    "Producing meat requires significant resources. Opting for plant-based meals reduces your environmental impact.",
-                carbonReduction: "5-10 kg CO2e/month",
-            },
-            {
-                title: "Switch to LED Light Bulbs",
-                reason:
-                    "LEDs consume up to 85% less electricity than incandescent bulbs, lowering your carbon emissions and energy bills.",
-                carbonReduction: "3-5 kg CO2e/month",
-            },
-            {
-                title: "Compost Food Waste",
-                reason:
-                    "Composting diverts food from landfills, where it produces methane, a potent greenhouse gas.",
-                carbonReduction: "2-4 kg CO2e/month",
-            },
-        ];
+        const suggestions = generatedSuggestions
 
         container.innerHTML = "";
         suggestions.forEach((suggestion) => {
@@ -979,29 +996,23 @@ class EcoTrackApp {
             scene.add(dirt);
 
             // NEW: Add dead grass bushes and logs for scores below 20 (but above 10)
-            if (score < 20) {
-                // Dead Grass Bushes
-                for (let i = 0; i < 15; i++) {
-                    const bushGeo = new THREE.SphereGeometry(0.5 + Math.random() * 0.4, 8, 6);
-                    const bushMat = new THREE.MeshLambertMaterial({color: 0x6b5a4b}); // Dead bush color
-                    const bush = new THREE.Mesh(bushGeo, bushMat);
-                    const angle = Math.random() * Math.PI * 2;
-                    const r = 2 + Math.random() * 12;
-                    bush.position.set(Math.cos(angle) * r, -0.5, Math.sin(angle) * r);
-                    scene.add(bush);
-                }
-
-                // Logs
-                for (let i = 0; i < 6; i++) {
-                    const logGeo = new THREE.CylinderGeometry(0.2, 0.2, 1.5 + Math.random(), 8);
-                    const logMat = new THREE.MeshLambertMaterial({color: 0x5c4033}); // Dark wood color
-                    const log = new THREE.Mesh(logGeo, logMat);
-                    const angle = Math.random() * Math.PI * 2;
-                    const r = 5 + Math.random() * 9;
-                    log.position.set(Math.cos(angle) * r, -0.6, Math.sin(angle) * r);
-                    log.rotation.z = Math.PI / 2 + (Math.random() - 0.5);
-                    log.rotation.y = Math.random() * Math.PI;
-                    scene.add(log);
+            if (score < 30) {
+                let logCount = 4;
+                for (let i = 0; i < logCount; i++) {
+                    const angle = (i / logCount) * Math.PI * 2 + Math.random() * 0.2;
+                    const x = Math.cos(angle) * (8 + Math.random() * 4);
+                    const z = Math.sin(angle) * (8 + Math.random() * 4);
+                    // Trunk
+                    const trunkMatColor = (score < 30) ? 0x6b4f2a : 0x8b5a2b; // Dead trunk color for low score
+                    // MODIFIED: Trunk height now scales with the score
+                    const trunkHeight = 2 + Math.random() + (score / 30);
+                    const trunkGeo = new THREE.CylinderGeometry(0.3, 0.4, trunkHeight, 8);
+                    const trunkMat = new THREE.MeshLambertMaterial({color: trunkMatColor});
+                    const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+                    trunk.position.set(x, trunkHeight / 2 - 1, z); // Adjust Y position based on height
+                    if (score < 20)
+                        trunk.rotation.z = 90 * Math.PI / 180;
+                    scene.add(trunk);
                 }
             }
 
@@ -1041,6 +1052,7 @@ class EcoTrackApp {
                 const b = Math.round(pale.b + (vivid.b - pale.b) * t);
                 leafColor = (r << 16) | (g << 8) | b;
             }
+
 
             for (let i = 0; i < treeCount; i++) {
                 const angle = (i / treeCount) * Math.PI * 2 + Math.random() * 0.2;
@@ -1199,12 +1211,10 @@ class EcoTrackApp {
     }
 }
 
-// Initialize app when DOM is loaded
-document.addEventListener("DOMContentLoaded", () => {
-    new EcoTrackApp();
-});
-
-
 document.addEventListener("DOMContentLoaded", () => {
     window.app = new EcoTrackApp();
 });
+
+function logout() {
+    window.location.href = "/logout";
+}

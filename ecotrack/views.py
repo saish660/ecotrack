@@ -121,11 +121,7 @@ def login_view(request):
 @login_required
 def logout_view(request):
     logout(request)
-    return JsonResponse({
-        'status': 'success',
-        'message': 'You have been logged out.',
-        'redirect_url': reverse('accounts')  # Redirect to the login page after logout
-    })
+    return HttpResponseRedirect(reverse('accounts'))
 
 
 @login_required
@@ -136,7 +132,8 @@ def survey(request):
         user.user_data = data
         user.survey_answered = True
         user.carbon_footprint = calculate_personal_carbon_footprint(data)['summary']['personal_monthly_co2e_kg']
-        user.sustainability_score = calculate_initial_sustainability_score(user.user_data)['initial_sustainability_score']
+        user.sustainability_score = calculate_initial_sustainability_score(user.user_data)[
+            'initial_sustainability_score']
         user.save()
         return JsonResponse({'status': 'success', 'message': 'Survey submitted successfully'}, status=200)
 
@@ -182,7 +179,7 @@ def save_habit(request):
 @login_required
 def update_habit(request):
     data = json.loads(request.body)
-    habit_id_to_update = data.get('habit_id') # This is the 'id' within the habit dictionary
+    habit_id_to_update = str(data.get('habit_id'))  # This is the 'id' within the habit dictionary
     new_habit_text = data.get('habit_text')
 
     # Find the habit by its 'id' in the list
@@ -191,19 +188,19 @@ def update_habit(request):
         if habit.get('id') == habit_id_to_update:
             habit['text'] = new_habit_text
             found = True
-            break # Exit loop once the habit is found and updated
+            break  # Exit loop once the habit is found and updated
 
     if found:
-        request.user.save() # Save the user object to persist changes to the habits list
+        request.user.save()  # Save the user object to persist changes to the habits list
         return JsonResponse({'status': 'success', 'message': 'Habit updated successfully'})
     else:
-        return JsonResponse({'status': 'error', 'message': 'Habit not found'}, status=404)
+        return JsonResponse({'status': 'error', 'message': 'Habit not found'}, status=500)
 
 
 @login_required
 def delete_habit(request):
     data = json.loads(request.body)
-    habit_id_to_delete = str(data.get('habit_id')) # Ensure it's a string for comparison
+    habit_id_to_delete = str(data.get('habit_id'))  # Ensure it's a string for comparison
 
     # Create a new list excluding the habit to be deleted
     # This is a common and safe way to remove items from a list while iterating
@@ -214,15 +211,15 @@ def delete_habit(request):
     ]
 
     if len(request.user.habits) < initial_habits_count:
-        request.user.save() # Save changes if a habit was actually removed
+        request.user.save()  # Save changes if a habit was actually removed
         return JsonResponse({'status': 'success', 'message': 'Habit deleted successfully'})
     else:
         return JsonResponse({'status': 'error', 'message': 'Habit not found'}, status=404)
 
+
 @login_required
 def submit_questionnaire(request):
     pass
-
 
 
 @login_required
@@ -248,12 +245,18 @@ def get_suggestions(request):
         },
     ]
 
-    return JsonResponse({'status': 'success', 'data': "Hello, world"})
+    # return JsonResponse({'status': 'success', 'data': "Hello, world"})
     client = genai.Client()
+
+    prompt = f"""
+    Give me a few suggestions of habits to perform to reduce carbon footprint.
+     **Do not include any explanations, formatting, or backticks. Only provide a raw RFC8259 compliant JSON array.
+     ** Here is an output example: {sample_suggestions}
+    """
 
     response = client.models.generate_content(
         model="gemini-2.5-flash",
-        contents=f"Give me a few suggestions of habit to perform to reduce carbon footprint. Give the output in json format. Here are some examples: {sample_suggestions}",
+        contents=prompt,
     )
-    print(response.text)
-    return JsonResponse({'status': 'success', 'data': response.text})
+
+    return JsonResponse({'status': 'success', 'data': json.loads(response.text)})
