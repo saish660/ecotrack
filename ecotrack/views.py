@@ -218,8 +218,92 @@ def delete_habit(request):
 
 
 @login_required
+def get_questions(request):
+    if request.method != "POST":
+        return HttpResponseRedirect(reverse('index'))
+
+    sample_questions = [
+        {
+            "id": "q1",
+            "question": "How did you commute today?",
+            "options": [
+                {"text": "🚶 Walk/Cycle", "value": "Walk/Cycle"},
+                {"text": "🚌 Public Transport", "value": "Public Transport"},
+                {"text": "🚗 Car (single)", "value": "Car (single)"},
+                {"text": "👥 Car (carpool)", "value": "Car (carpool)"},
+            ],
+        },
+        {
+            "id": "q2",
+            "question": "Did you consume meat today?",
+            "options": [
+                {"text": "🥩 Yes", "value": "Yes"},
+                {"text": "🥬 No (or Plant-based)", "value": "No"},
+            ],
+        },
+        {
+            "id": "q3",
+            "question": "Did you unplug unused electronics?",
+            "options": [
+                {"text": "✅ Yes, all", "value": "Yes, all"},
+                {"text": "⚡ Some", "value": "Some"},
+                {"text": "❌ No", "value": "No"},
+            ],
+        },
+    ]
+
+    client = genai.Client()
+
+    prompt = f"""
+    Give me a few questions based on user's habits to access their habits which they created to reduce carbon footprint.
+     **Do not include any explanations, formatting, or backticks and make sure there is atleast one question related to each habit.
+      Only provide a raw RFC8259 compliant JSON array.
+     ** Here is an output example: {sample_questions}
+     ** Here is the list of user's habits: {request.user.habits}
+    """
+
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt,
+    )
+
+    return JsonResponse({'status': 'success', 'data': json.loads(response.text)})
+
+@login_required
 def submit_questionnaire(request):
-    pass
+    if request.method != "POST":
+        return HttpResponseRedirect(reverse('index'))
+
+    data = json.loads(request.body)
+    client = genai.Client()
+
+    sample_output = {
+        "score": 5
+    }
+
+    prompt = f"""
+    Given data of survey conducted on a user's habits to access their habits which they created to reduce carbon footprint.
+    Give each response to question a score of 1 if the response helps their goal(reduce carbon footprint) and 0 if it does not.
+    Return the total score of the survey in JSON format
+     **Do not include any explanations, formatting, or backticks and make sure there is atleast one question related to each habit.
+      Only provide a raw RFC8259 compliant JSON array.
+      ** Here is the data: {data}
+     ** Here is an output example: {sample_output}
+    """
+
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt,
+    )
+
+    if int(json.loads(response.text)['score']):
+        request.user.sustainability_score += int(json.loads(response.text)['score'])
+    else:
+        request.user.sustainability_score += 1
+
+    request.user.save()
+
+    return JsonResponse({'status': 'success', 'message': 'Questionnaire submitted successfully'})
 
 
 @login_required

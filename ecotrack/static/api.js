@@ -15,10 +15,6 @@ function getCsrfToken() {
 
 // API Service Class
 class EcoTrackAPI {
-    constructor() {
-        this.currentUserId = localStorage.getItem("currentUserId") || 1; // Default to user 1 for demo
-    }
-
     async getDashboardData() {
         let userdata;
 
@@ -49,16 +45,58 @@ class EcoTrackAPI {
             habits_completed_today: 0, // TODO: Replace with real calculation if needed
             streak_count: userdata['data']['streak'],
             habits: userdata['data']['habits'],
-            achievements: [],
+            achievements: [
+                {
+                    achievement_type: "first_checkin",
+                    achievement_title: "First Check-in",
+                    unlocked: true,
+                },
+                {
+                    achievement_type: "streak_4",
+                    achievement_title: "4-Day Streak",
+                    unlocked: true,
+                },
+                {
+                    achievement_type: "streak_7",
+                    achievement_title: "7-Day Streak",
+                    unlocked: false,
+                },
+                {
+                    achievement_type: "streak_30",
+                    achievement_title: "30-Day Streak",
+                    unlocked: false,
+                },
+                {
+                    achievement_type: "streak_50",
+                    achievement_title: "50-Day Streak",
+                    unlocked: false,
+                },
+                {
+                    achievement_type: "streak_100",
+                    achievement_title: "100-Day Streak",
+                    unlocked: false,
+                },
+                {
+                    achievement_type: "habits_5",
+                    achievement_title: "5 Habits Master",
+                    unlocked: false,
+                },
+                {
+                    achievement_type: "score_80",
+                    achievement_title: "Eco Champion",
+                    unlocked: false,
+                },
+                {
+                    achievement_type: "set_footprint",
+                    achievement_title: "Shoes without footprint",
+                    unlocked: false,
+                },
+            ],
         };
     }
 
     async submitQuestionnaire(data) {
-        // Mock API call for questionnaire submission
-        console.log("Submitting questionnaire:", data);
-
-        // Simulate API delay
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        console.log(data)
 
         return {
             success: true,

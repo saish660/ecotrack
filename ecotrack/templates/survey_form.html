@@ -323,20 +323,6 @@
                 </div>
                 <div class="questionnaire-item">
                     <p class="question-text">
-                        How much distance do you commute in your car per week on average? (in km)
-                    </p>
-                    <div class="form-element">
-                        <input
-                                type="number"
-                                name="how_much_distance_do_you_commute_in_public_transport_per_week_on_average"
-                                min="0"
-                                max="10000"
-                                required
-                        />
-                    </div>
-                </div>
-                <div class="questionnaire-item">
-                    <p class="question-text">
                         How many flights have you taken in the past year?
                     </p>
                     <div class="form-element">
@@ -543,19 +529,19 @@
                         Do you recycle the following? (Check all that apply)
                     </p>
                     <div class="form-element">
-                        <label
+                        <label class="option-card"
                         ><input type="checkbox" name="do_you_recycle_the_following_check_all_that_apply_paper"/>
                             Paper</label
                         >
-                        <label
+                        <label class="option-card"
                         ><input type="checkbox" name="do_you_recycle_the_following_check_all_that_apply_glass"/>
                             Glass</label
                         >
-                        <label
+                        <label class="option-card"
                         ><input type="checkbox" name="do_you_recycle_the_following_check_all_that_apply_metal"/>
                             Metal</label
                         >
-                        <label
+                        <label class="option-card"
                         ><input type="checkbox" name="do_you_recycle_the_following_check_all_that_apply_plastic"/>
                             Plastic</label
                         >
@@ -741,7 +727,7 @@
 
             <div id="survey-status-message" class="hidden">
                 <div class="completion-celebration">
-                    <div class="celebration-icon">🎉</div>
+                    <div class="celebration-icon">Redirecting...</div>
                     <p>Thank you for completing the survey!</p>
                 </div>
             </div>
@@ -765,6 +751,10 @@
         const after = form
             .querySelector('input[name="how_many_vehicles_are_in_your_household"]')
             .closest(".questionnaire-item");
+
+        const div2 = document.createElement("div");
+        div2.className = "questionnaire-item vehicle-questionnaire";
+
         for (let i = 1; i <= count; i++) {
             const div = document.createElement("div");
             div.className = "questionnaire-item vehicle-questionnaire";
@@ -788,11 +778,30 @@
           `;
             after.parentNode.insertBefore(div, after.nextSibling);
         }
+
+        div2.innerHTML = `
+                    <p class="question-text">
+                        How much distance do you commute in your car per week on average? (in km)
+                    </p>
+                    <div class="form-element">
+                        <input
+                                type="number"
+                                name="how_much_distance_do_you_commute_in_public_transport_per_week_on_average"
+                                min="0"
+                                max="10000"
+                                required
+                        />
+                </div>
+          `;
+        after.parentNode.insertBefore(div2, after.nextSibling);
     }
 
     form.how_many_vehicles_are_in_your_household?.addEventListener("input", () => {
-        renderVehicleQuestions();
-        updateSurveyProgress();
+        if (form.how_many_vehicles_are_in_your_household.value !== 0) {
+            renderVehicleQuestions();
+        } else {
+            renderVehicleQuestions();
+        }
     });
 
     // --- Dynamic public transport mileage ---
@@ -881,7 +890,7 @@
                     );
                     if (![...group].some((r) => r.checked)) allAnswered = false;
                 } else if (input.type === "checkbox") {
-                    // Not required for checkboxes in this form
+                    // pass
                 } else if (!input.value) {
                     allAnswered = false;
                 }
@@ -943,8 +952,6 @@
         }, 1000);
     })
 
-    // --- Initial render ---
-    renderVehicleQuestions();
     renderFlightQuestions();
     // Force how_many_people_are_in_your_household input to be empty on load
     if (form.how_many_people_are_in_your_household) form.how_many_people_are_in_your_household.value = "";

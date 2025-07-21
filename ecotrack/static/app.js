@@ -15,11 +15,10 @@ class EcoTrackApp {
             this.bindEvents();
 
             // Load initial data
-            await this.loadHabits();
             await this.loadAchievements();
         } catch (error) {
             console.error("Failed to initialize app:", error);
-            this.showError("Failed to connect to server. Using offline mode.");
+            this.showError("Failed to connect to server.");
         }
     }
 
@@ -46,9 +45,7 @@ class EcoTrackApp {
         if (scoreElement && scoreCircle) {
             scoreElement.textContent = data.sustainability_score;
             const circumference = 2 * Math.PI * 45;
-            const offset =
-                circumference - (data.sustainability_score / 100) * circumference;
-            scoreCircle.style.strokeDashoffset = offset;
+            scoreCircle.style.strokeDashoffset = circumference - (data.sustainability_score / 100) * circumference;
         }
 
         // Update carbon footprint
@@ -68,43 +65,6 @@ class EcoTrackApp {
         if (streakElement) {
             streakElement.textContent = `${data.streak_count} days`;
         }
-    }
-
-    async loadHabits() {
-        try {
-            const data = await this.api.getDashboardData();
-            this.renderHabits(data.habits || []);
-        } catch (error) {
-            console.error("Failed to load habits:", error);
-            this.renderHabits([]);
-        }
-    }
-
-
-    renderHabits(habits) {
-        /* const habitList = document.getElementById("habit-items-list");
-       if (!habitList) return;
-
-       habitList.innerHTML = "";
-       habits.forEach((habit) => {
-         const listItem = document.createElement("li");
-         listItem.className = "habit-item";
-         listItem.innerHTML = `
-                   <label>
-                       <input type="checkbox" data-id="${habit.id}" ${
-           habit.completed ? "checked" : ""
-         }>
-                       <span class="habit-text">${habit.text}</span>
-                   </label>
-                   <button class="delete-habit-btn" data-id="${habit.id}">
-                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                           <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-                       </svg>
-                   </button>
-               `;
-         habitList.appendChild(listItem);
-       });
-   */
     }
 
     async loadAchievements() {
@@ -178,7 +138,7 @@ class EcoTrackApp {
             streak_30: "👑",
             habits_5: "✅",
             score_80: "🏆",
-            carbon_reducer: "🌍",
+            set_footprint: "👣",
             water_saver: "💧",
             energy_efficient: "⚡",
             waste_warrior: "🗑️",
@@ -189,44 +149,6 @@ class EcoTrackApp {
             public_transport: "🚌",
             carpooler: "👥",
             solar_user: "☀️",
-            local_eater: "🍎",
-            seasonal_shopper: "🍂",
-            plastic_free: "🚫",
-            zero_waste: "♻️",
-            tree_planter: "🌳",
-            beach_cleaner: "🏖️",
-            community_volunteer: "🤝",
-            sustainable_shopper: "🛒",
-            repair_master: "🔧",
-            upcycler: "♻️",
-            thrift_shopper: "👕",
-            digital_nomad: "💻",
-            paperless: "📱",
-            smart_thermostat: "🏠",
-            rainwater_collector: "🌧️",
-            herb_gardener: "🌿",
-            sustainable_fashion: "👗",
-            minimalist: "📦",
-            conscious_consumer: "🧠",
-            carbon_neutral: "🌱",
-            sustainability_educator: "📚",
-            green_tech: "🔬",
-            biodiversity_protector: "🦋",
-            ocean_guardian: "🐋",
-            climate_activist: "🌍",
-            sustainable_traveler: "✈️",
-            green_builder: "🏗️",
-            renewable_energy: "⚡",
-            sustainable_farmer: "👨‍🌾",
-            wildlife_protector: "🦁",
-            clean_air: "💨",
-            water_conservation: "💧",
-            soil_health: "🌱",
-            pollution_fighter: "🛡️",
-            sustainable_design: "🎨",
-            green_innovation: "💡",
-            circular_economy: "🔄",
-            sustainable_future: "🔮",
         };
         return icons[type] || "🏆";
     }
@@ -237,57 +159,11 @@ class EcoTrackApp {
             streak_3: "Maintain a 3-day streak",
             streak_7: "Maintain a 7-day streak",
             streak_30: "Maintain a 30-day streak",
+            streak_50: "Maintain a 50-day streak",
+            streak_100: "Maintain a 100-day streak",
             habits_5: "Complete 5 habits in one day",
             score_80: "Reach 80+ sustainability score",
-            carbon_reducer: "Reduce your carbon footprint by 20%",
-            water_saver: "Save 1000 liters of water",
-            energy_efficient: "Use 30% less energy",
-            waste_warrior: "Reduce waste by 50%",
-            plant_based: "Go plant-based for a week",
-            recycler: "Recycle 100 items",
-            composter: "Start composting at home",
-            bike_rider: "Bike 50 miles this month",
-            public_transport: "Use public transport 20 times",
-            carpooler: "Carpool 10 times",
-            solar_user: "Switch to solar energy",
-            local_eater: "Eat local food for a month",
-            seasonal_shopper: "Buy seasonal produce",
-            plastic_free: "Go plastic-free for a week",
-            zero_waste: "Achieve zero waste for a month",
-            tree_planter: "Plant 10 trees",
-            beach_cleaner: "Clean up a beach",
-            community_volunteer: "Volunteer 20 hours",
-            sustainable_shopper: "Buy only sustainable products",
-            repair_master: "Repair 5 broken items",
-            upcycler: "Upcycle 10 items",
-            thrift_shopper: "Buy 20 second-hand items",
-            digital_nomad: "Work remotely for a month",
-            paperless: "Go paperless for 3 months",
-            smart_thermostat: "Install smart home devices",
-            rainwater_collector: "Collect rainwater",
-            herb_gardener: "Grow your own herbs",
-            sustainable_fashion: "Buy only sustainable fashion",
-            minimalist: "Declutter 100 items",
-            conscious_consumer: "Research all purchases",
-            carbon_neutral: "Achieve carbon neutrality",
-            sustainability_educator: "Teach 10 people about sustainability",
-            green_tech: "Use green technology",
-            biodiversity_protector: "Protect local biodiversity",
-            ocean_guardian: "Protect marine life",
-            climate_activist: "Participate in climate action",
-            sustainable_traveler: "Travel sustainably",
-            green_builder: "Build with sustainable materials",
-            renewable_energy: "Use 100% renewable energy",
-            sustainable_farmer: "Support sustainable farming",
-            wildlife_protector: "Protect wildlife habitats",
-            clean_air: "Improve air quality",
-            water_conservation: "Conserve water resources",
-            soil_health: "Improve soil health",
-            pollution_fighter: "Reduce pollution",
-            sustainable_design: "Design sustainable solutions",
-            green_innovation: "Create green innovations",
-            circular_economy: "Support circular economy",
-            sustainable_future: "Build a sustainable future",
+            set_footprint: "Reach sustainability score of 100",
         };
         return descriptions[type] || "Achievement unlocked!";
     }
@@ -302,12 +178,8 @@ class EcoTrackApp {
         }
         // Initialize suggestions
         this.renderSuggestions();
-        // Initialize carbon graph
-        this.initializeCarbonGraph();
         // Initialize go-back buttons
         this.initializeGoBackButtons();
-        // Initialize daily habit checklist (dashboard)
-        this.initializeDailyHabitChecklist();
         // Initialize 3D ecosystem visualization
         this.initializeEcosystem3D();
     }
@@ -355,15 +227,6 @@ class EcoTrackApp {
                 document.getElementById("all-achievements").classList.add("active");
                 this.loadAchievements();
             });
-        }
-    }
-
-    initializeCarbonGraph() {
-        // Initialize the canvas for the carbon graph
-        const canvas = document.getElementById("carbonGraph");
-        if (canvas) {
-            this.canvas = canvas;
-            this.ctx = canvas.getContext("2d");
         }
     }
 
@@ -496,39 +359,28 @@ class EcoTrackApp {
         }
     }
 
-    renderDailyQuestionnaire() {
+    async renderDailyQuestionnaire() {
         const form = document.getElementById("daily-questionnaire-form");
         if (!form) return;
 
-        const questions = [
-            {
-                id: "q1",
-                question: "How did you commute today?",
-                options: [
-                    {text: "🚶 Walk/Cycle", value: "Walk/Cycle"},
-                    {text: "🚌 Public Transport", value: "Public Transport"},
-                    {text: "🚗 Car (single)", value: "Car (single)"},
-                    {text: "👥 Car (carpool)", value: "Car (carpool)"},
-                ],
+        console.log("Fetching questions from server...")
+        const questions = await fetch("get_questions", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken(),
             },
-            {
-                id: "q2",
-                question: "Did you consume meat today?",
-                options: [
-                    {text: "🥩 Yes", value: true},
-                    {text: "🥬 No (Plant-based)", value: false},
-                ],
-            },
-            {
-                id: "q3",
-                question: "Did you unplug unused electronics?",
-                options: [
-                    {text: "✅ Yes, all", value: "Yes, all"},
-                    {text: "⚡ Some", value: "Some"},
-                    {text: "❌ No", value: "No"},
-                ],
-            },
-        ];
+            body: {}
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Network response was not ok (${response.status})`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                return data.data;
+            })
 
         form.innerHTML = "";
         questions.forEach((q) => {
@@ -547,7 +399,7 @@ class EcoTrackApp {
                 const optionLabel = document.createElement("label");
                 optionLabel.className = "option-card";
                 optionLabel.innerHTML = `
-                    <input type="radio" name="${q.id}" value="${[option.question, option.value]}" required>
+                    <input type="radio" name="${q.question}" value="${option.value}" required>
                     <div class="option-content">
                         <span>${option.text}</span>
                     </div>
@@ -620,9 +472,14 @@ class EcoTrackApp {
     bindEvents() {
         // Questionnaire events
         this.bindQuestionnaireEvents();
+    }
 
-        // Modal events
-        this.bindModalEvents();
+    formDataToJson(formData) {
+        const obj = {};
+        for (const [key, value] of formData.entries()) {
+            obj[key] = value;
+        }
+        return JSON.stringify(obj);
     }
 
     bindQuestionnaireEvents() {
@@ -632,14 +489,9 @@ class EcoTrackApp {
                 event.preventDefault();
 
                 const formData = new FormData(form);
-                const questionnaireData = {
-                    commute_choice: formData.get("q1"),
-                    meat_consumption: formData.get("q2") === "true",
-                    electronics_unplugged: formData.get("q3"),
-                };
 
                 try {
-                    await this.api.submitQuestionnaire(questionnaireData);
+                    await this.api.submitQuestionnaire(this.formDataToJson(formData));
                     this.showSuccess("Daily check-in submitted successfully!");
                     await this.loadDashboardData();
                     await this.loadAchievements();
@@ -711,11 +563,6 @@ class EcoTrackApp {
         progressText.textContent = `${answeredQuestions.size}/${totalQuestions} questions answered`;
     }
 
-    bindModalEvents() {
-        // Note: All habit-related modal logic is now in script.js
-        // This can be used for other modals if needed in the future.
-    }
-
     initializeGoBackButtons() {
         document.querySelectorAll(".go-back-btn").forEach((btn) => {
             btn.addEventListener("click", () => {
@@ -731,116 +578,12 @@ class EcoTrackApp {
                 // Special case: if going back to dashboard, re-render ecosystem and habits
                 if (target === "dashboard") {
                     this.initializeEcosystem3D();
-                    this.initializeDailyHabitChecklist();
                 }
                 if (target === "profile") {
                     this.renderProfileAchievementsPreview(this.lastAchievements || []);
                 }
             });
         });
-    }
-
-    // --- Daily Habit Checklist (Dashboard) ---
-    async initializeDailyHabitChecklist() {
-        const form = document.getElementById("daily-habit-checklist-form");
-        const list = document.getElementById("dashboard-habit-list");
-        const statusMsg = document.getElementById("habit-checklist-status-message");
-        let submittedDate;
-        if (!form || !list) return;
-
-
-        const habits = await fetch("get_user_data", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCsrfToken(),
-            },
-            body: {}
-        })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`Network response was not ok (${response.status})`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                submittedDate = data.data.habit_checked_date
-                let habits = Object.entries(data.data.habits) || [];
-                if (typeof habits === 'object' && !Array.isArray(habits)) {
-                    habits = Object.values(habits);
-                }
-                return habits;
-            })
-
-        function isTodayOrPast(inputDateString) {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
-            const inputDate = new Date(inputDateString);
-            inputDate.setHours(0, 0, 0, 0);
-
-            return inputDate >= today;
-        }
-
-        let isSubmitted = isTodayOrPast(submittedDate);
-        const today = new Date().toDateString()
-
-        // If already submitted today, disable form
-        list.innerHTML = "";
-        habits.forEach((habit) => {
-            const li = document.createElement("li");
-            li.className = "habit-item";
-            li.innerHTML = `<label><input type="checkbox" value="${habit['id']}" ${
-                checked.includes(habit['id']) ? "checked" : ""
-            } ${isSubmitted ? "disabled" : ""}> ${habit['text']}</label>`;
-            list.appendChild(li);
-        });
-        form.querySelectorAll("input[type='checkbox']").forEach((cb) => {
-            cb.addEventListener("change", () => {
-                // Save checked state
-                const checkedIds = Array.from(
-                    form.querySelectorAll("input[type='checkbox']:checked")
-                ).map((cb) => parseInt(cb.value));
-            });
-        });
-
-        // Handle submit
-        form.onsubmit = (e) => {
-            e.preventDefault();
-            // Save as submitted for today
-            const checkedIds = Array.from(
-                form.querySelectorAll("input[type='checkbox']:checked")
-            ).map((cb) => parseInt(cb.value));
-            localStorage.setItem(
-                "habitChecklistState",
-                JSON.stringify({date: today, checked: checkedIds})
-            );
-            // Disable all checkboxes and show message
-            form
-                .querySelectorAll("input[type='checkbox']")
-                .forEach((cb) => (cb.disabled = true));
-            form.querySelector("#submit-habit-checklist").disabled = true;
-            statusMsg.classList.remove("hidden");
-        };
-        // If already submitted, disable and show message
-        if (isSubmitted) {
-            form
-                .querySelectorAll("input[type='checkbox']")
-                .forEach((cb) => (cb.disabled = true));
-            form.querySelector("#submit-habit-checklist").disabled = true;
-            statusMsg.classList.remove("hidden");
-        } else {
-            form.querySelector("#submit-habit-checklist").disabled = false;
-            statusMsg.classList.add("hidden");
-        }
-    }
-
-    // --- Habit Management (Habits Page Only) ---
-    // Note: All habit management logic has been moved to script.js
-    // to avoid conflicts and keep a single source of truth.
-
-    showHabitInputDialog(habits, renderHabits, editIdx = null) {
-        // This is now legacy and handled by script.js
     }
 
     initializeEcosystem3D() {

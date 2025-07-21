@@ -430,3 +430,24 @@ def calculate_initial_sustainability_score(survey_data: dict) -> dict:
         },
         "initial_feedback": feedback
     }
+
+
+
+def check_achievements(user):
+    achievements = []
+    if user.last_checkin > user.date_joined:
+        achievements.append(1)
+
+    if user.streak >= 3:
+        achievements.append(2)
+
+    if user.streak >= 7:
+        achievements.append(3)
+
+    # TODO Complete 5 habits
+
+    if user.sustainability_score >= 80:
+        achievements.append(5)
+
+    if user.sustainability_score >= 90:
+        achievements.append(6)
