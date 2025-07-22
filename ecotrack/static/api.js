@@ -34,6 +34,7 @@ class EcoTrackAPI {
             })
             .then(data => {
                 userdata = data
+                console.log(userdata['data']['achievements'])
             })
             .catch(error => {
                 console.error('Error:', error);
@@ -42,65 +43,10 @@ class EcoTrackAPI {
         return {
             sustainability_score: userdata['data']['sustainability_score'],
             carbon_footprint: userdata['data']['carbon_footprint'],
-            habits_completed_today: 0, // TODO: Replace with real calculation if needed
+            habits_completed_today: userdata['data']['habits_today'],
             streak_count: userdata['data']['streak'],
             habits: userdata['data']['habits'],
-            achievements: [
-                {
-                    achievement_type: "first_checkin",
-                    achievement_title: "First Check-in",
-                    unlocked: true,
-                },
-                {
-                    achievement_type: "streak_4",
-                    achievement_title: "4-Day Streak",
-                    unlocked: true,
-                },
-                {
-                    achievement_type: "streak_7",
-                    achievement_title: "7-Day Streak",
-                    unlocked: false,
-                },
-                {
-                    achievement_type: "streak_30",
-                    achievement_title: "30-Day Streak",
-                    unlocked: false,
-                },
-                {
-                    achievement_type: "streak_50",
-                    achievement_title: "50-Day Streak",
-                    unlocked: false,
-                },
-                {
-                    achievement_type: "streak_100",
-                    achievement_title: "100-Day Streak",
-                    unlocked: false,
-                },
-                {
-                    achievement_type: "habits_5",
-                    achievement_title: "5 Habits Master",
-                    unlocked: false,
-                },
-                {
-                    achievement_type: "score_80",
-                    achievement_title: "Eco Champion",
-                    unlocked: false,
-                },
-                {
-                    achievement_type: "set_footprint",
-                    achievement_title: "Shoes without footprint",
-                    unlocked: false,
-                },
-            ],
-        };
-    }
-
-    async submitQuestionnaire(data) {
-        console.log(data)
-
-        return {
-            success: true,
-            message: "Questionnaire submitted successfully",
+            achievements: userdata['data']['achievements'],
         };
     }
 

@@ -9,7 +9,6 @@ urlpatterns = [
     path("signup", views.signup, name="signup"),
     path("survey", views.survey, name="survey"),
     path("get_user_data", views.get_user_data, name="get_user_data"),
-    path("get_achievements", views.get_achievements, name="get_achievements"),
     path("save_habit", views.save_habit, name="save_habit"),
     path("update_habit", views.update_habit, name="update_habit"),
     path("delete_habit", views.delete_habit, name="delete_habit"),

@@ -7,42 +7,21 @@ document.addEventListener("DOMContentLoaded", () => {
     );
     const scoreCircle = document.getElementById("score-circle");
     const carbonFootprintElement = document.getElementById("carbon-footprint");
-    const habitsCompletedTodayElement = document.getElementById(
-        "habits-completed-today"
-    );
-    const habitList = document.getElementById("habit-items-list");
+    const habitsTodayElement = document.getElementById("habits-completed-today");
     const suggestionCardsContainer = document.getElementById(
         "suggestion-cards-container"
     );
-    const addHabitBtn = document.getElementById("habit-add-btn");
-    const addHabitModal = document.getElementById("add-habit-modal");
-    const newHabitInput = document.getElementById("habit-input");
-    const cancelAddHabitBtn = document.getElementById("cancel-add-habit");
-    const confirmAddHabitBtn = document.getElementById("confirm-add-habit");
-
     const dailyQuestionnaireForm = document.getElementById(
         "daily-questionnaire-form"
     );
     const formStatusMessage = document.getElementById("form-status-message");
 
-    const ecoChallengeText = document.getElementById("eco-challenge-text");
-    const generateChallengeBtn = document.getElementById(
-        "generate-challenge-btn"
-    );
-
-    const openActivityModalBtn = document.getElementById(
-        "open-activity-modal-btn"
-    );
-    const dailyActivityModal = document.getElementById("daily-activity-modal");
-    const closeActivityModalBtn = document.getElementById("close-activity-modal");
-    const activityInputForm = document.getElementById("activity-input-form");
-    const getAiInsightBtn = document.getElementById("get-ai-insight-btn");
-    const aiInsightOutput = document.getElementById("ai-insight-output");
-    const insightText = document.getElementById("insight-text");
 
     const customMessageBox = document.getElementById("custom-message-box");
     const messageBoxText = document.getElementById("message-box-text");
     const messageBoxOk = document.getElementById("message-box-ok");
+
+    const DATA_API = new EcoTrackAPI();
 
     // --- Global Data Variables ---
     let userData = {
@@ -53,9 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
         habits: []
     };
     let achievements = [];
-    let habitsCompletedToday = 0;
     let lastQuestionnaireSubmissionDate = null;
-    let currentEcoChallenge = 'Click "Generate New Challenge" to get started!';
 
     // --- CSRF Token Function ---
     function getCsrfToken() {
@@ -91,13 +68,13 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await response.json();
             let habits = data.data.habits || [];
 
-            console.log(habits[1])
             userData = {
                 username: data.data.username || '',
                 streak: data.data.streak || 0,
                 carbon_footprint: data.data.carbon_footprint || 0,
                 sustainability_score: data.data.sustainability_score || 0,
-                habits: habits
+                habits: habits,
+                habits_today: data.data.habits_today || 0,
             };
 
 
@@ -106,33 +83,6 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error("[API] Error fetching user data:", error);
             showAlert("Error loading user data. Please refresh the page.");
             return null;
-        }
-    }
-
-
-    async function fetchAchievements() {
-        try {
-            const response = await fetch("get_achievements", {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCsrfToken(),
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error(`Network response was not ok (${response.status})`);
-            }
-
-            const data = await response.json();
-            achievements = data.achievements || [];
-
-            console.log("[API] Achievements loaded:", achievements);
-            return achievements;
-        } catch (error) {
-            console.error("[API] Error fetching achievements:", error);
-            // Don't show error for achievements as it's not critical
-            return [];
         }
     }
 
@@ -207,31 +157,6 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (error) {
             console.error("[API] Error deleting habit:", error);
             showAlert("Error deleting habit. Please try again.");
-            return null;
-        }
-    }
-
-    async function toggleHabitCompletion(habitId) {
-        try {
-            const response = await fetch("toggle_habit", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCsrfToken(),
-                },
-                body: JSON.stringify({habit_id: habitId})
-            });
-
-            if (!response.ok) {
-                throw new Error(`Network response was not ok (${response.status})`);
-            }
-
-            const data = await response.json();
-            console.log("[API] Habit toggled:", data);
-            return data;
-        } catch (error) {
-            console.error("[API] Error toggling habit:", error);
-            showAlert("Error updating habit completion. Please try again.");
             return null;
         }
     }
@@ -363,6 +288,10 @@ document.addEventListener("DOMContentLoaded", () => {
             carbonFootprintElement.textContent = userData.carbon_footprint.toFixed(1);
         }
 
+        if (habitsTodayElement) {
+            habitsTodayElement.textContent = userData.habits_today;
+        }
+
         if (scoreCircle) {
             const circumference = 2 * Math.PI * 45; // radius of circle = 45
             scoreCircle.style.strokeDasharray = circumference;
@@ -395,25 +324,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const data = await fetchUserData();
         if (data) {
             updateDashboardUI();
-        }
-    }
-
-    function updateQuestionnaireStatus() {
-        const today = new Date().toDateString();
-        if (lastQuestionnaireSubmissionDate === today) {
-            if (dailyQuestionnaireForm) {
-                dailyQuestionnaireForm.classList.add("disabled");
-            }
-            if (formStatusMessage) {
-                formStatusMessage.classList.remove("hidden");
-            }
-        } else {
-            if (dailyQuestionnaireForm) {
-                dailyQuestionnaireForm.classList.remove("disabled");
-            }
-            if (formStatusMessage) {
-                formStatusMessage.classList.add("hidden");
-            }
         }
     }
 
@@ -477,16 +387,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 if (response.ok) {
                     await refreshUserData();
-                    updateQuestionnaireStatus();
-
                     // Hide/disable the form and show the completion message
                     dailyQuestionnaireForm.classList.add("disabled");
                     if (formStatusMessage) {
                         formStatusMessage.classList.remove("hidden");
+                        window.location.href = "/"
                     }
                     showAlert("Daily check-in submitted!");
                 } else {
                     showAlert("Error submitting questionnaire. Please try again.");
+                    window.location.reload();
                 }
             } catch (error) {
                 console.error("Error submitting questionnaire:", error);
@@ -526,12 +436,8 @@ document.addEventListener("DOMContentLoaded", () => {
         // Load user data
         await fetchUserData();
 
-        // Load achievements
-        await fetchAchievements();
-
         // Update UI
         updateDashboardUI();
-        updateQuestionnaireStatus();
 
         // Setup habits section
         await setupHabitsSection();

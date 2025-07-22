@@ -8,15 +8,16 @@ def get_default_dict():
 
 
 class User(AbstractUser):
-    age = models.PositiveIntegerField(null=True, blank=True)
+    days_since_last_survey = models.PositiveIntegerField(default=0)
     streak = models.PositiveIntegerField(default=0)
     sustainability_score = models.PositiveIntegerField(default=0)
-    carbon_footprint = models.FloatField(default=0)
+    carbon_footprint = models.JSONField(default=list, blank=True)
     habits = models.JSONField(default=list, blank=True)
     user_data = models.JSONField(default=get_default_dict, blank=True)
     survey_answered = models.BooleanField(default=False)
     achievements = models.JSONField(default=list, blank=True)
     last_checkin = models.DateField(null=True, blank=True, default=datetime.now() - timedelta(days=1))
+    habits_today = models.PositiveIntegerField(default=0)
 
     # By inheriting from AbstractUser, you get these fields automatically:
     # username

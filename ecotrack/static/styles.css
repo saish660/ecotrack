@@ -95,6 +95,21 @@ main {
   display: block;
 }
 
+.dashboard-flexbox {
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: column;
+  width: 100%;
+}
+
+.ecosystem-visualization-card {
+  order: 2
+}
+
+#dashboard-shortcut-card {
+  order: 1;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -384,6 +399,12 @@ main {
   font-weight: 600;
   color: var(--primary-color-dark);
   text-align: center;
+}
+
+.disabled-checkin {
+    opacity: 0.6;
+  pointer-events: none;
+  order: 3;
 }
 
 /* --- Enhanced Questionnaire Styles --- */

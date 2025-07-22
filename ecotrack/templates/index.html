@@ -73,29 +73,30 @@
                 </div>
             </div>
         </div>
-        <div
-                class="card dashboard-shortcut-card"
-                id="dashboard-checkin-shortcut"
-        >
-            <h2 class="card-title">🌱 Daily Eco-Check-in</h2>
-            <p>
-                Complete your daily eco-check-in to track your habits and earn
-                rewards!
-            </p>
-            <button
-                    class="btn btn-primary"
-                    style="margin-top: 1rem"
-                    data-tab="checkin"
-            >
-                Check-in
-            </button>
-        </div>
-        <!-- AI Ecosystem Visualization Section -->
-        <div class="card" id="ecosystem-visualization-card">
-            <h2 class="card-title">🌳 Your Ecosystem Patch</h2>
+        <div class="dashboard-flexbox">
             <div
-                    id="ecosystem-visualization-container"
-                    style="
+                    class="card dashboard-shortcut-card"
+                    id="dashboard-checkin-shortcut"
+            >
+                <h2 class="card-title">🌱 Daily Eco-Check-in</h2>
+                <p>
+                    Complete your daily eco-check-in to track your habits and earn
+                    rewards!
+                </p>
+                <button
+                        class="btn btn-primary"
+                        style="margin-top: 1rem"
+                        data-tab="checkin"
+                >
+                    Check-in
+                </button>
+            </div>
+            <!-- AI Ecosystem Visualization Section -->
+            <div class="card" id="ecosystem-visualization-card">
+                <h2 class="card-title">🌳 Your Ecosystem Patch</h2>
+                <div
+                        id="ecosystem-visualization-container"
+                        style="
               width: 100%;
               height: 300px;
               display: flex;
@@ -106,21 +107,20 @@
               overflow: hidden;
               margin-bottom: 1rem;
             "
-            >
-                <div id="ecosystem3d" style="width: 100%; height: 300px"></div>
-            </div>
-            <p
-                    style="
+                >
+                    <div id="ecosystem3d" style="width: 100%; height: 300px"></div>
+                </div>
+                <p
+                        style="
               font-size: 0.95rem;
               color: var(--text-color-secondary);
               margin-bottom: 0;
             "
-            >
-                This patch of land evolves as your sustainability improves!
-            </p>
+                >
+                    This patch of land evolves as your sustainability improves!
+                </p>
+            </div>
         </div>
-
-        <!-- Shortcut card to Check-in page -->
     </section>
 
     <!-- Habits Tab -->
@@ -175,7 +175,7 @@
             <div class="profile-avatar">U</div>
             <p style="font-size: 1.25rem; font-weight: 600">{{ request.user.username }}</p>
             <p style="color: var(--text-color-secondary); margin-bottom: 1.5rem">
-                Joined: {{ request.user.date_joined|localtime }}
+                Joined: {{ request.user.date_joined.date }}
             </p>
             <button
                     class="btn"
@@ -235,7 +235,7 @@
                     <div class="progress-fill" id="questionnaire-progress"></div>
                 </div>
                 <span class="progress-text" id="progress-text"
-                >0/3 questions answered</span
+                >Loading...</span
                 >
             </div>
             <form
@@ -378,7 +378,6 @@
             // Special logic for checkin and all-achievements
             if (window.app && tab === "checkin") {
                 window.app.renderDailyQuestionnaire();
-                window.app.initializeQuestionnaireProgress();
             }
             if (window.app && tab === "all-achievements") {
                 window.app.loadAchievements();

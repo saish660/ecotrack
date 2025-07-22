@@ -5,20 +5,21 @@ from django.shortcuts import render
 from django.http import JsonResponse, HttpResponseRedirect
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_http_methods
-import json
 from .models import User
 from django.db import IntegrityError
 from django.contrib.auth import login, authenticate, logout
 from django.urls import reverse
 from .utils import *
 from uuid import uuid4
-import requests
 from google import genai
 
 
 @login_required
 def index(request):
-    if not request.user.survey_answered:
+    if not request.user.survey_answered or request.user.days_since_last_survey > 30:
+        if request.user.days_since_last_survey > 30:
+            request.user.days_since_last_survey = 0
+            request.user.save()
         return HttpResponseRedirect(reverse('survey'))
     return render(request, "index.html")
 
@@ -150,13 +151,8 @@ def get_user_data(request):
         "carbon_footprint": request.user.carbon_footprint,
         "sustainability_score": request.user.sustainability_score,
         "habits": request.user.habits,
-        "habit_checked_date": request.user.last_checkin,
-    }})
-
-
-@login_required
-def get_achievements(request):
-    return JsonResponse({'status': 'success', 'data': {
+        "last_checkin_date": request.user.last_checkin,
+        "habits_today": request.user.habits_today,
         "achievements": request.user.achievements,
     }})
 
@@ -165,11 +161,9 @@ def get_achievements(request):
 def save_habit(request):
     data = json.loads(request.body)
     habit_id = uuid4()
-    current_date = datetime.now() - timedelta(days=1)
     habit = {
         "id": str(habit_id.int)[:5],
-        "text": data.get('habit_text'),
-        "last_checked": current_date.strftime("%Y-%m-%d")
+        "text": data.get('habit_text')
     }
     request.user.habits.append(habit)
     request.user.save()
@@ -256,7 +250,7 @@ def get_questions(request):
 
     prompt = f"""
     Give me a few questions based on user's habits to access their habits which they created to reduce carbon footprint.
-     **Do not include any explanations, formatting, or backticks and make sure there is atleast one question related to each habit.
+     **Do not include any explanations, formatting, double quotes or backticks and make sure there is atleast one question related to each habit.
       Only provide a raw RFC8259 compliant JSON array.
      ** Here is an output example: {sample_questions}
      ** Here is the list of user's habits: {request.user.habits}
@@ -296,11 +290,22 @@ def submit_questionnaire(request):
         contents=prompt,
     )
 
-    if int(json.loads(response.text)['score']):
-        request.user.sustainability_score += int(json.loads(response.text)['score'])
+    score = int(json.loads(response.text)['score'])
+
+    if score:
+        request.user.sustainability_score += score
     else:
         request.user.sustainability_score += 1
 
+    if request.user.last_checkin < (datetime.now() - timedelta(days=1)).date():
+        request.user.streak = 1
+    else:
+        request.user.streak += 1
+
+    request.user.last_checkin = datetime.now()
+    request.user.days_since_last_survey += 1
+    request.user.habits_today = score
+    request.user.achievements = check_achievements(request.user)
     request.user.save()
 
     return JsonResponse({'status': 'success', 'message': 'Questionnaire submitted successfully'})

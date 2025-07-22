@@ -1,4 +1,5 @@
 import json
+from django.utils import timezone
 
 CONFIG = {
     "factors": {
@@ -434,6 +435,14 @@ def calculate_initial_sustainability_score(survey_data: dict) -> dict:
 
 
 def check_achievements(user):
+    now_aware = timezone.now()
+
+    if user.date_joined.tzinfo is None:
+        user.date_joined = timezone.make_aware(user.date_joined, timezone.get_current_timezone())
+
+    if user.last_checkin.tzinfo is None:
+        user.last_checkin = timezone.make_aware(user.last_checkin, timezone.get_current_timezone())
+
     achievements = []
     if user.last_checkin > user.date_joined:
         achievements.append(1)
@@ -444,10 +453,21 @@ def check_achievements(user):
     if user.streak >= 7:
         achievements.append(3)
 
-    # TODO Complete 5 habits
+    if user.streak >= 30:
+        achievements.append(4)
 
-    if user.sustainability_score >= 80:
+    if user.streak >= 50:
         achievements.append(5)
 
-    if user.sustainability_score >= 90:
+    if user.streak >= 100:
         achievements.append(6)
+
+    if user.habits_today >= 5:
+        achievements.append(7)
+
+    if user.sustainability_score >= 80:
+        achievements.append(8)
+
+    if user.sustainability_score == 100:
+        achievements.append(9)
+    return achievements

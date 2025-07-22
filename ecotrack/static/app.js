@@ -5,6 +5,71 @@ class EcoTrackApp {
         this.initializeApp();
     }
 
+    questions_fetched = false;
+
+    userAchievements = [
+        {
+            id: 1,
+            icon: "🌱",
+            title: "First Check-In",
+            description: "Complete your first daily check-in",
+        },
+        {
+            id: 2,
+            icon: "🔥",
+            title: "4-Day Streak",
+            description: "Maintain a 3-day streak",
+        },
+        {
+            id: 3,
+            icon: "⚡",
+            title: "7-Day Streak",
+            description: "Maintain a 7-day streak",
+        },
+        {
+            id: 4,
+            icon: "👑",
+            title: "30-Day Streak",
+            description: "Maintain a 30-day streak",
+        },
+        {
+            id: 5,
+            icon: "🏆",
+            title: "50-Day Streak",
+            description: "Maintain a 50-day streak",
+        },
+        {
+            id: 6,
+            icon: "🏆",
+            title: "100-Day Streak",
+            description: "Maintain a 100-day streak",
+        },
+        {
+            id: 7,
+            icon: "✅",
+            title: "5 Habits Master",
+            description: "Complete 5 habits in one day",
+        },
+        {
+            id: 8,
+            icon: "🌳",
+            title: "Eco Champion",
+            description: "Reach 80+ sustainability score",
+        },
+        {
+            id: 9,
+            icon: "👣",
+            title: "Shoes without footprint",
+            description: "Reach sustainability score of 100",
+        },
+    ]
+
+    getAchievementById(id) {
+        const foundAchievement = this.userAchievements.find(achievement => achievement.id === id);
+
+        return foundAchievement || false;
+    }
+
     async initializeApp() {
         try {
             // Load dashboard data from API
@@ -12,7 +77,7 @@ class EcoTrackApp {
 
             // Initialize UI components
             this.initializeUI();
-            this.bindEvents();
+            this.bindQuestionnaireEvents();
 
             // Load initial data
             await this.loadAchievements();
@@ -86,19 +151,15 @@ class EcoTrackApp {
         const container = document.getElementById("achievements-container");
         if (!container) return;
         container.innerHTML = "";
-        achievements.forEach((achievement) => {
+        this.userAchievements.forEach((achievement) => {
             const element = document.createElement("div");
             element.className = `achievement-item ${
-                achievement.unlocked ? "unlocked" : ""
+                achievements.includes(achievement.id) ? "unlocked" : ""
             }`;
             element.innerHTML = `
-        <span class="achievement-icon">${this.getAchievementIcon(
-                achievement.achievement_type
-            )}</span>
-        <div class="achievement-title">${achievement.achievement_title}</div>
-        <div class="achievement-desc">${this.getAchievementDescription(
-                achievement.achievement_type
-            )}</div>
+        <span class="achievement-icon">${achievement.icon}</span>
+        <div class="achievement-title">${achievement.title}</div>
+        <div class="achievement-desc">${achievement.description}</div>
       `;
             container.appendChild(element);
         });
@@ -111,61 +172,18 @@ class EcoTrackApp {
         );
         if (!previewContainer) return;
         previewContainer.innerHTML = "";
-        // Show up to 3 unlocked achievements, or fallback to first 3 if less than 3 unlocked
-        const unlocked = achievements.filter((a) => a.unlocked);
+
         const toShow =
-            unlocked.length >= 3 ? unlocked.slice(0, 3) : achievements.slice(0, 3);
-        toShow.forEach((achievement) => {
+            achievements.length > 2 ? achievements.slice(0, 2) : achievements;
+        toShow.forEach((id) => {
             const element = document.createElement("div");
-            element.className = `achievement-item ${
-                achievement.unlocked ? "unlocked" : ""
-            }`;
+            element.className = `achievement-item unlocked`;
             element.innerHTML = `
-        <span class="achievement-icon">${this.getAchievementIcon(
-                achievement.achievement_type
-            )}</span>
-        <div class="achievement-title">${achievement.achievement_title}</div>
+        <span class="achievement-icon">${this.getAchievementById(id).icon}</span>
+        <div class="achievement-title">${this.getAchievementById(id).title}</div>
       `;
             previewContainer.appendChild(element);
         });
-    }
-
-    getAchievementIcon(type) {
-        const icons = {
-            first_checkin: "🌱",
-            streak_3: "🔥",
-            streak_7: "⚡",
-            streak_30: "👑",
-            habits_5: "✅",
-            score_80: "🏆",
-            set_footprint: "👣",
-            water_saver: "💧",
-            energy_efficient: "⚡",
-            waste_warrior: "🗑️",
-            plant_based: "🥬",
-            recycler: "♻️",
-            composter: "🌱",
-            bike_rider: "🚴",
-            public_transport: "🚌",
-            carpooler: "👥",
-            solar_user: "☀️",
-        };
-        return icons[type] || "🏆";
-    }
-
-    getAchievementDescription(type) {
-        const descriptions = {
-            first_checkin: "Complete your first daily check-in",
-            streak_3: "Maintain a 3-day streak",
-            streak_7: "Maintain a 7-day streak",
-            streak_30: "Maintain a 30-day streak",
-            streak_50: "Maintain a 50-day streak",
-            streak_100: "Maintain a 100-day streak",
-            habits_5: "Complete 5 habits in one day",
-            score_80: "Reach 80+ sustainability score",
-            set_footprint: "Reach sustainability score of 100",
-        };
-        return descriptions[type] || "Achievement unlocked!";
     }
 
     initializeUI() {
@@ -205,7 +223,6 @@ class EcoTrackApp {
                 // Render questionnaire only when check-in tab is activated
                 if (targetTab === "checkin") {
                     this.renderDailyQuestionnaire();
-                    this.initializeQuestionnaireProgress();
                 }
             });
         });
@@ -359,7 +376,13 @@ class EcoTrackApp {
         }
     }
 
+    question_count;
+
     async renderDailyQuestionnaire() {
+        if (this.questions_fetched) {
+            return
+        }
+
         const form = document.getElementById("daily-questionnaire-form");
         if (!form) return;
 
@@ -382,10 +405,15 @@ class EcoTrackApp {
                 return data.data;
             })
 
+        this.questions_fetched = true;
+
         form.innerHTML = "";
+        this.question_count = 0
         questions.forEach((q) => {
+            this.question_count += 1
             const questionDiv = document.createElement("div");
             questionDiv.className = "questionnaire-item";
+            questionDiv.id = `${q.question}`;
 
             const questionText = document.createElement("p");
             questionText.className = "question-text";
@@ -416,6 +444,8 @@ class EcoTrackApp {
         submitButton.className = "btn btn-primary";
         submitButton.style.marginTop = "1rem";
         form.appendChild(submitButton);
+
+        this.updateQuestionnaireProgress();
     }
 
     initializeQuestionnaireProgress() {
@@ -423,7 +453,7 @@ class EcoTrackApp {
         const progressText = document.getElementById("progress-text");
         if (progressFill && progressText) {
             progressFill.style.width = "0%";
-            progressText.textContent = "0/3 questions answered";
+            progressText.textContent = `0/${this.question_count} questions answered`;
         }
     }
 
@@ -431,7 +461,7 @@ class EcoTrackApp {
         const container = document.getElementById("suggestion-cards-container");
         if (!container) return;
 
-        let generatedSuggestions = await fetch("get_suggestions", {
+        const suggestions = await fetch("get_suggestions", {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -449,10 +479,6 @@ class EcoTrackApp {
                 return data.data;
             })
 
-        console.log(generatedSuggestions);
-
-        const suggestions = generatedSuggestions
-
         container.innerHTML = "";
         suggestions.forEach((suggestion) => {
             const card = document.createElement("div");
@@ -469,38 +495,9 @@ class EcoTrackApp {
         });
     }
 
-    bindEvents() {
-        // Questionnaire events
-        this.bindQuestionnaireEvents();
-    }
-
-    formDataToJson(formData) {
-        const obj = {};
-        for (const [key, value] of formData.entries()) {
-            obj[key] = value;
-        }
-        return JSON.stringify(obj);
-    }
-
     bindQuestionnaireEvents() {
         const form = document.getElementById("daily-questionnaire-form");
         if (form) {
-            form.addEventListener("submit", async (event) => {
-                event.preventDefault();
-
-                const formData = new FormData(form);
-
-                try {
-                    await this.api.submitQuestionnaire(this.formDataToJson(formData));
-                    this.showSuccess("Daily check-in submitted successfully!");
-                    await this.loadDashboardData();
-                    await this.loadAchievements();
-                } catch (error) {
-                    console.error("Failed to submit questionnaire:", error);
-                    this.showError("Failed to submit questionnaire");
-                }
-            });
-
             form.addEventListener("change", (event) => {
                 if (event.target.type === "radio") {
                     this.updateQuestionnaireProgress();
@@ -548,10 +545,15 @@ class EcoTrackApp {
 
         if (!form || !progressFill || !progressText) return;
 
-        const totalQuestions = 3;
+        const totalQuestions = this.question_count;
         const answeredQuestions = new Set();
+        let question_id_list = []
 
-        ["q1", "q2", "q3"].forEach((qId) => {
+        document.querySelectorAll(".questionnaire-item").forEach((optionCard) => {
+            question_id_list.push(optionCard.id)
+        })
+
+        question_id_list.forEach((qId) => {
             const selectedOption = form.querySelector(`input[name="${qId}"]:checked`);
             if (selectedOption) {
                 answeredQuestions.add(qId);
@@ -578,6 +580,7 @@ class EcoTrackApp {
                 // Special case: if going back to dashboard, re-render ecosystem and habits
                 if (target === "dashboard") {
                     this.initializeEcosystem3D();
+                    toggleCheckinForm();
                 }
                 if (target === "profile") {
                     this.renderProfileAchievementsPreview(this.lastAchievements || []);
@@ -934,8 +937,48 @@ class EcoTrackApp {
     }
 }
 
+function isDateToday(inputDate) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const compareDate = new Date(inputDate);
+    compareDate.setHours(0, 0, 0, 0);
+
+    return compareDate.getTime() === today.getTime();
+}
+
+async function toggleCheckinForm() {
+    let checked_in_today = await fetch("get_user_data", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken(),
+        },
+        body: {}
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Network response was not ok (${response.status})`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            return data['data']['last_checkin_date']
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+
+    if (isDateToday(checked_in_today)) {
+        let checkin_div = document.getElementById("dashboard-checkin-shortcut")
+        checkin_div.classList.add("disabled-checkin");
+        checkin_div.querySelector("p").innerHTML = "Done for today, Come back tomorrow!";
+    }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     window.app = new EcoTrackApp();
+    toggleCheckinForm();
 });
 
 function logout() {
