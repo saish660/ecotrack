@@ -27,8 +27,8 @@ def update_latest_values(user, new_value):
 
 @login_required
 def index(request):
-    if not request.user.survey_answered or request.user.days_since_last_survey > 30:
-        if request.user.days_since_last_survey > 30:
+    if not request.user.survey_answered or request.user.days_since_last_survey > 7:
+        if request.user.days_since_last_survey > 7:
             request.user.days_since_last_survey = 0
             request.user.save()
         return HttpResponseRedirect(reverse('survey'))

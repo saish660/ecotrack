@@ -1005,5 +1005,11 @@ main {
   margin-bottom: 1rem;
 }
 
+.bp-widget-widget {
+  bottom: 500px;
+  right: 30px;
+}
 
-
+.bpFab {
+  bottom: 100px !important;
+}
