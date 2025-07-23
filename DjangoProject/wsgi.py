@@ -8,8 +8,12 @@ https://docs.djangoproject.com/en/5.2/howto/deployment/wsgi/
 """
 
 import os
-
+from dotenv import load_dotenv
 from django.core.wsgi import get_wsgi_application
+
+load_dotenv()
+
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'DjangoProject.settings')
 

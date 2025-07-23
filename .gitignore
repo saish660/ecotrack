@@ -73,3 +73,4 @@ yarn-debug.log*
 yarn-error.log*
 
 venv
+DjangoProject/settings.py
