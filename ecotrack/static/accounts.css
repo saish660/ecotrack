@@ -7,6 +7,12 @@ body {
   justify-content: center;
   margin: 0;
 }
+
+.website-logo {
+  width: 70px;
+  height: 70px;
+}
+
 input,
 button {
   font-family: inherit;
@@ -24,7 +30,12 @@ button {
   gap: 1.5rem;
 }
 .auth-logo {
-  font-size: 2rem;
+    display: flex;
+  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
   font-weight: 700;
   color: #22c55e;
   margin-bottom: 0.5rem;

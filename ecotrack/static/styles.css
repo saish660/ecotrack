@@ -15,7 +15,7 @@
   --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1),
     0 4px 6px -2px rgb(0 0 0 / 0.05);
-  --gradient-primary: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  --gradient-primary: linear-gradient(135deg, #69e696 0%, #36a65e 100%);
   --gradient-secondary: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   --gradient-accent: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
 }
@@ -25,6 +25,7 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  /*border: 1px solid red;*/
 }
 
 html {
@@ -47,6 +48,12 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.website-logo {
+  width: 35px;
+  height: 35px;
+  margin-right: 10px;
+}
+
 /* Hide scrollbar for a cleaner look */
 body::-webkit-scrollbar {
   display: none;
@@ -58,11 +65,10 @@ body {
 
 /* Main App Layout */
 .app-header {
-  background: linear-gradient(135deg, var(--surface-color) 0%, #f8fafc 100%);
+  background: linear-gradient(15deg, var(--surface-color) 0%, #f0ffe6 100%);
   padding: 1rem 1.5rem;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   position: sticky;
   top: 0;
   z-index: 10;
