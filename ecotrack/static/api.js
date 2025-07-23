@@ -47,6 +47,7 @@ class EcoTrackAPI {
             streak_count: userdata['data']['streak'],
             habits: userdata['data']['habits'],
             achievements: userdata['data']['achievements'],
+            last_8_footprints: userdata['data']['last_8_footprints'],
         };
     }
 

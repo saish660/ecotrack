@@ -471,3 +471,4 @@ def check_achievements(user):
     if user.sustainability_score == 100:
         achievements.append(9)
     return achievements
+

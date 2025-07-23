@@ -247,30 +247,28 @@ class EcoTrackApp {
         }
     }
 
-    renderCarbonGraph() {
+    async renderCarbonGraph() {
         const canvas = document.getElementById("carbonGraph");
         if (!canvas) return;
         const ctx = canvas.getContext("2d");
         const width = canvas.width;
         const height = canvas.height;
 
-        // Clear canvas
         ctx.clearRect(0, 0, width, height);
 
-        // Sample data for the month (weekly totals in kg CO2)
-        const lastMonthData = [75.5, 82.1, 78.9, 85.3]; // 4 weeks of data
-        const thisMonthData = [85.2, 88.8, 81.1, 90.5]; // 4 weeks of data
-        // Generate prediction using trend-based linear forecasting
+        const data = await this.api.getDashboardData();
+        let graphData = data.last_8_footprints;
+        const lastMonthData = graphData.slice(0, 4);
+        const thisMonthData = graphData.slice(4, 8);
+
         const nextMonthPrediction = thisMonthData.map((current, i) => {
-            const trend = current - lastMonthData[i]; // Calculate week-over-week trend
-            const predicted = current + trend; // Project trend forward
-            // Optional: Add some bounds to keep predictions realistic
-            return Math.max(50, Math.min(120, predicted)); // Cap between 50-120 kg CO2
+            const trend = current - lastMonthData[i];
+            const predicted = current + trend;
+            return Math.max(50, Math.min(120, predicted));
         });
         const weeks = ["Week 1", "Week 2", "Week 3", "Week 4"];
 
-        // Chart dimensions
-        const padding = 60; // Increased padding to accommodate labels
+        const padding = 60;
         const chartWidth = width - 2 * padding;
         const chartHeight = height - 2 * padding;
         const maxValue = Math.max(...thisMonthData, ...lastMonthData, ...nextMonthPrediction);

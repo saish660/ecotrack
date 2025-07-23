@@ -18,6 +18,7 @@ class User(AbstractUser):
     achievements = models.JSONField(default=list, blank=True)
     last_checkin = models.DateField(null=True, blank=True, default=datetime.now() - timedelta(days=1))
     habits_today = models.PositiveIntegerField(default=0)
+    last_8_footprint_measurements = models.JSONField(default=list, blank=True)
 
     # By inheriting from AbstractUser, you get these fields automatically:
     # username

@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.http import JsonResponse, HttpResponseRedirect
@@ -13,6 +12,18 @@ from .utils import *
 from uuid import uuid4
 from google import genai
 
+
+
+def update_latest_values(user, new_value):
+    if not user.last_8_footprint_measurements:
+        return [new_value] * 8
+    global_data_list = user.last_8_footprint_measurements
+    if len(global_data_list) >= 8:
+        global_data_list.pop(0) # Removes the element at index 0
+
+    global_data_list.append(new_value)
+
+    return global_data_list
 
 @login_required
 def index(request):
@@ -135,6 +146,7 @@ def survey(request):
         user.carbon_footprint = calculate_personal_carbon_footprint(data)['summary']['personal_monthly_co2e_kg']
         user.sustainability_score = calculate_initial_sustainability_score(user.user_data)[
             'initial_sustainability_score']
+        user.last_8_footprint_measurements = update_latest_values(user, calculate_personal_carbon_footprint(data)['summary']['personal_monthly_co2e_kg'])
         user.save()
         return JsonResponse({'status': 'success', 'message': 'Survey submitted successfully'}, status=200)
 
@@ -145,6 +157,10 @@ def survey(request):
 
 @login_required
 def get_user_data(request):
+    if request.user.last_checkin < datetime.now().date():
+        request.user.habits_today = 0
+        request.user.save()
+
     return JsonResponse({'status': 'success', 'data': {
         "username": request.user.username,
         "streak": request.user.streak,
@@ -154,6 +170,7 @@ def get_user_data(request):
         "last_checkin_date": request.user.last_checkin,
         "habits_today": request.user.habits_today,
         "achievements": request.user.achievements,
+        "last_8_footprints": request.user.last_8_footprint_measurements,
     }})
 
 
