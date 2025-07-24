@@ -322,7 +322,8 @@ def submit_questionnaire(request):
     request.user.last_checkin = datetime.now()
     request.user.days_since_last_survey += 1
     request.user.habits_today = score
-    request.user.achievements = check_achievements(request.user)
+    request.user.achievements += check_achievements(request.user)
+    request.user.achievements = list(set(request.user.achievements))
     request.user.save()
 
     return JsonResponse({'status': 'success', 'message': 'Questionnaire submitted successfully'})
