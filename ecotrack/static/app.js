@@ -264,7 +264,7 @@ class EcoTrackApp {
         const nextMonthPrediction = thisMonthData.map((current, i) => {
             const trend = current - lastMonthData[i];
             const predicted = current + trend;
-            return Math.max(50, Math.min(120, predicted));
+            return Math.max(50, Math.min(1200, predicted));
         });
         const weeks = ["Week 1", "Week 2", "Week 3", "Week 4"];
 
