@@ -359,6 +359,7 @@ def get_suggestions(request):
     Give me a few suggestions of habits to perform to reduce carbon footprint.
      **Do not include any explanations, formatting, or backticks. Only provide a raw RFC8259 compliant JSON array.
      ** Here is an output example: {sample_suggestions}
+** Here are the user's existing habits: {request.user.habits}
     """
 
     response = client.models.generate_content(
