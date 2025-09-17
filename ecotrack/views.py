@@ -368,3 +368,330 @@ def get_suggestions(request):
     )
 
     return JsonResponse({'status': 'success', 'data': json.loads(response.text)})
+
+# Push Notification Views
+import json
+from django.conf import settings
+from pywebpush import webpush, WebPushException
+from .models import PushSubscription
+from datetime import datetime, time
+
+
+@login_required
+@csrf_protect
+@require_http_methods(["POST"])
+def subscribe_push(request):
+    """Subscribe user for push notifications"""
+    try:
+        data = json.loads(request.body)
+        
+        subscription_info = data.get('subscription')
+        notification_time = data.get('notificationTime', '09:00')  # Default to 9:00 AM
+        
+        if not subscription_info:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Subscription info is required'
+            }, status=400)
+        
+        # Parse notification time
+        try:
+            time_obj = datetime.strptime(notification_time, '%H:%M').time()
+        except ValueError:
+            time_obj = datetime.strptime('09:00', '%H:%M').time()
+        
+        # Create or update push subscription
+        push_subscription, created = PushSubscription.objects.update_or_create(
+            user=request.user,
+            defaults={
+                'endpoint': subscription_info['endpoint'],
+                'p256dh_key': subscription_info['keys']['p256dh'],
+                'auth_key': subscription_info['keys']['auth'],
+                'notification_time': time_obj,
+                'is_active': True
+            }
+        )
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Successfully subscribed to push notifications'
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Invalid JSON data'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+
+
+@login_required
+@csrf_protect
+@require_http_methods(["POST"])
+def unsubscribe_push(request):
+    """Unsubscribe user from push notifications"""
+    try:
+        push_subscription = PushSubscription.objects.get(user=request.user)
+        push_subscription.is_active = False
+        push_subscription.save()
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Successfully unsubscribed from push notifications'
+        })
+        
+    except PushSubscription.DoesNotExist:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'No active subscription found'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+
+
+@login_required
+@csrf_protect
+@require_http_methods(["POST"])
+def update_notification_time(request):
+    """Update user's notification time preference"""
+    try:
+        data = json.loads(request.body)
+        notification_time = data.get('notificationTime')
+        
+        if not notification_time:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Notification time is required'
+            }, status=400)
+        
+        # Parse and validate time
+        try:
+            time_obj = datetime.strptime(notification_time, '%H:%M').time()
+        except ValueError:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid time format. Use HH:MM format'
+            }, status=400)
+        
+        # Update subscription
+        try:
+            push_subscription = PushSubscription.objects.get(user=request.user)
+            push_subscription.notification_time = time_obj
+            push_subscription.save()
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Notification time updated successfully'
+            })
+            
+        except PushSubscription.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'No active subscription found. Please subscribe first.'
+            }, status=404)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Invalid JSON data'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+
+
+@login_required
+@csrf_protect
+@require_http_methods(["POST"])
+def test_notification(request):
+    """Send a test push notification to the user"""
+    try:
+        push_subscription = PushSubscription.objects.get(user=request.user, is_active=True)
+        
+        # Prepare notification payload
+        payload = {
+            'title': 'EcoTrack Test Notification',
+            'body': 'This is a test notification from EcoTrack!',
+            'icon': '/static/icons/ecotrack_logo.png',
+            'badge': '/static/icons/favicon-32x32.png',
+            'tag': 'test-notification',
+            'data': {
+                'url': '/',
+                'timestamp': str(datetime.now())
+            }
+        }
+        
+        # Send push notification
+        try:
+            webpush(
+                subscription_info=push_subscription.get_subscription_info(),
+                data=json.dumps(payload),
+                vapid_private_key=settings.VAPID_PRIVATE_KEY,
+                vapid_claims={
+                    "sub": settings.VAPID_CLAIMS_EMAIL,
+                }
+            )
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Test notification sent successfully!'
+            })
+            
+        except WebPushException as ex:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Failed to send notification: {str(ex)}'
+            }, status=500)
+        
+    except PushSubscription.DoesNotExist:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'No active push subscription found. Please subscribe first.'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+
+
+@login_required
+def get_notification_settings(request):
+    """Get user's current notification settings"""
+    try:
+        try:
+            push_subscription = PushSubscription.objects.get(user=request.user)
+            return JsonResponse({
+                'status': 'success',
+                'data': {
+                    'isSubscribed': push_subscription.is_active,
+                    'notificationTime': push_subscription.notification_time.strftime('%H:%M'),
+                    'vapidPublicKey': settings.VAPID_PUBLIC_KEY
+                }
+            })
+        except PushSubscription.DoesNotExist:
+            return JsonResponse({
+                'status': 'success',
+                'data': {
+                    'isSubscribed': False,
+                    'notificationTime': '09:00',
+                    'vapidPublicKey': settings.VAPID_PUBLIC_KEY
+                }
+            })
+            
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+
+
+def send_daily_notifications():
+    """Function to send daily notifications - to be called by scheduler"""
+    from datetime import datetime, timezone
+    import pytz
+
+    # Get current time in the server timezone
+    tz = pytz.timezone(settings.TIME_ZONE)
+    now = datetime.now(tz)
+    current_time = now.time()
+
+    # Match exact minute only
+    current_hour = current_time.hour
+    current_minute = current_time.minute
+
+    subscriptions = PushSubscription.objects.filter(
+        is_active=True,
+        notification_time__hour=current_hour,
+        notification_time__minute=current_minute,
+    )
+
+    for subscription in subscriptions:
+        try:
+            # Skip if already sent today for this time
+            if (
+                subscription.last_sent_date == now.date()
+                and subscription.last_sent_time == subscription.notification_time
+            ):
+                continue
+
+            # Create personalized notification payload
+            client = genai.Client()
+
+            prompt = f"""
+                Generate 1 single short, catchy, and engaging notification messages strictly to encourage users to fill out the EcoTrack check-in form.  
+                EcoTrack is an app that helps users track their sustainability habits and promotes eco-friendly behavior. It includes features like:
+                - Daily surveys to track eco actions 🌱
+                - Personalized sustainability score 📊
+                - AI chatbot to guide users 🤖
+                - Personalized suggestions for greener living 💡
+                - Rewards for completing surveys and taking eco-friendly actions 🎁
+
+                Ensure the notifications:
+                - Are under 50 characters
+                - Friendly, flirty, heartwarming motivating,  and aligned with EcoTrack's eco-conscious mission  
+                - Include clear call-to-actions like "Share your thoughts", "fill now", "complete now"  
+                - Include relevant emojis for engagement
+                - Highlight rewards or benefits if possible
+            """
+
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt,
+            )
+            
+            user = subscription.user
+            payload = {
+                'title': 'Check-In Reminder',
+                'body': f'{response}',
+                'icon': '/static/icons/ecotrack_logo.png',
+                'badge': '/static/icons/favicon-32x32.png',
+                'tag': 'daily-reminder',
+                'data': {
+                    'url': '/',
+                    'timestamp': str(now)
+                },
+                'actions': [
+                    {
+                        'action': 'open_app',
+                        'title': 'Open EcoTrack',
+                        'icon': '/static/icons/favicon-32x32.png'
+                    }
+                ]
+            }
+
+            # Send notification
+            webpush(
+                subscription_info=subscription.get_subscription_info(),
+                data=json.dumps(payload),
+                vapid_private_key=settings.VAPID_PRIVATE_KEY,
+                vapid_claims={
+                    "sub": settings.VAPID_CLAIMS_EMAIL,
+                }
+            )
+
+            # Mark as sent for today
+            subscription.last_sent_date = now.date()
+            subscription.last_sent_time = subscription.notification_time
+            subscription.save(update_fields=["last_sent_date", "last_sent_time", "updated_at"])
+
+        except WebPushException as ex:
+            # Log the error but continue with other subscriptions
+            print(f"Failed to send notification to user {subscription.user.username}: {str(ex)}")
+
+            # If the subscription is invalid, deactivate it
+            if ex.response and ex.response.status_code in [404, 410]:
+                subscription.is_active = False
+                subscription.save()
+
+        except Exception as ex:
+            print(f"Unexpected error sending notification to user {subscription.user.username}: {str(ex)}")

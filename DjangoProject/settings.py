@@ -133,3 +133,12 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# VAPID keys for Web Push notifications
+# Use a file path for the private key PEM to avoid deserialization issues.
+VAPID_PRIVATE_KEY = str(BASE_DIR / 'DjangoProject' / 'vapid_private.pem')
+
+VAPID_PUBLIC_KEY = 'BDYDIXQgu3-hMC86UOet8BAU0LfoBq1WYvX3orjS65dI9sCY0FNXSg53dhoipZ5T6OHbSNHrJAhnAd3c1xIBM_4'
+
+# Email for VAPID claims
+VAPID_CLAIMS_EMAIL = "mailto:admin@ecotrack.com"

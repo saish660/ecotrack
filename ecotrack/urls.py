@@ -15,5 +15,12 @@ urlpatterns = [
     path("submit_questionnaire", views.submit_questionnaire, name="submit_questionnaire"),
     path("get_suggestions", views.get_suggestions, name="get_suggestions"),
     path("get_questions", views.get_questions, name="get_questions"),
+    
+    # Push notification endpoints
+    path("api/notifications/subscribe", views.subscribe_push, name="subscribe_push"),
+    path("api/notifications/unsubscribe", views.unsubscribe_push, name="unsubscribe_push"),
+    path("api/notifications/update-time", views.update_notification_time, name="update_notification_time"),
+    path("api/notifications/test", views.test_notification, name="test_notification"),
+    path("api/notifications/settings", views.get_notification_settings, name="get_notification_settings"),
 
 ]

@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from datetime import datetime, timedelta
+import json
 
 
 def get_default_dict():
@@ -36,3 +37,30 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
+
+
+class PushSubscription(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='push_subscription')
+    endpoint = models.TextField()
+    p256dh_key = models.TextField()
+    auth_key = models.TextField()
+    notification_time = models.TimeField(default=datetime.strptime('09:00', '%H:%M').time())  # Default to 9:00 AM
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    # De-duplication tracking to avoid multiple sends in the same day for the same scheduled time
+    last_sent_date = models.DateField(null=True, blank=True)
+    last_sent_time = models.TimeField(null=True, blank=True)
+    
+    def __str__(self):
+        return f"{self.user.username} - Push Subscription"
+    
+    def get_subscription_info(self):
+        """Return subscription info in the format expected by pywebpush"""
+        return {
+            'endpoint': self.endpoint,
+            'keys': {
+                'p256dh': self.p256dh_key,
+                'auth': self.auth_key
+            }
+        }
