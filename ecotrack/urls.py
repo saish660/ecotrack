@@ -22,5 +22,14 @@ urlpatterns = [
     path("api/notifications/update-time", views.update_notification_time, name="update_notification_time"),
     path("api/notifications/test", views.test_notification, name="test_notification"),
     path("api/notifications/settings", views.get_notification_settings, name="get_notification_settings"),
+    
+    # Community endpoints
+    path("api/communities/create", views.create_community, name="create_community"),
+    path("api/communities/join", views.join_community, name="join_community"),
+    path("api/communities/leave", views.leave_community, name="leave_community"),
+    path("api/communities/my-communities", views.get_user_communities, name="get_user_communities"),
+    path("api/communities/public", views.get_public_communities, name="get_public_communities"),
+    path("api/communities/send-message", views.send_message, name="send_message"),
+    path("api/communities/<int:community_id>/messages", views.get_community_messages, name="get_community_messages"),
 
 ]

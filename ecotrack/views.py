@@ -4,13 +4,15 @@ from django.shortcuts import render
 from django.http import JsonResponse, HttpResponseRedirect
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_http_methods
-from .models import User
+from .models import User, Community, CommunityMembership, CommunityMessage, CommunityTask, TaskParticipation
 from django.db import IntegrityError
 from django.contrib.auth import login, authenticate, logout
 from django.urls import reverse
 from .utils import *
 from uuid import uuid4
 from google import genai
+from django.db.models import Q, Count
+from django.core.paginator import Paginator
 
 
 
@@ -588,6 +590,399 @@ def get_notification_settings(request):
                 }
             })
             
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+
+
+# Community Views
+@login_required
+@csrf_protect
+@require_http_methods(["POST"])
+def create_community(request):
+    """Create a new community"""
+    try:
+        import json
+        data = json.loads(request.body)
+        name = data.get('name', '').strip()
+        description = data.get('description', '').strip()
+        is_private = data.get('is_private', False)
+        
+        if not name:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Community name is required'
+            }, status=400)
+            
+        if Community.objects.filter(name=name).exists():
+            return JsonResponse({
+                'status': 'error',
+                'message': 'A community with this name already exists'
+            }, status=400)
+            
+        # Create community
+        community = Community.objects.create(
+            name=name,
+            description=description,
+            creator=request.user,
+            is_private=is_private
+        )
+        
+        # Auto-join creator as admin
+        CommunityMembership.objects.create(
+            community=community,
+            user=request.user,
+            role='admin'
+        )
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Community created successfully',
+            'data': {
+                'id': community.id,
+                'name': community.name,
+                'description': community.description,
+                'join_code': community.join_code,
+                'member_count': 1
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+
+
+@login_required
+@csrf_protect
+@require_http_methods(["POST"])
+def join_community(request):
+    """Join a community by join code or community ID"""
+    try:
+        import json
+        data = json.loads(request.body)
+        join_code = data.get('join_code', '').strip().upper()
+        community_id = data.get('community_id')
+        
+        community = None
+        if join_code:
+            try:
+                community = Community.objects.get(join_code=join_code)
+            except Community.DoesNotExist:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Invalid join code'
+                }, status=400)
+        elif community_id:
+            try:
+                community = Community.objects.get(id=community_id, is_private=False)
+            except Community.DoesNotExist:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Community not found or is private'
+                }, status=400)
+        else:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Join code or community ID is required'
+            }, status=400)
+            
+        # Check if user is already a member
+        if CommunityMembership.objects.filter(community=community, user=request.user, is_active=True).exists():
+            return JsonResponse({
+                'status': 'error',
+                'message': 'You are already a member of this community'
+            }, status=400)
+            
+        # Join community
+        membership, created = CommunityMembership.objects.get_or_create(
+            community=community,
+            user=request.user,
+            defaults={'is_active': True}
+        )
+        
+        if not created:
+            membership.is_active = True
+            membership.save()
+            
+        # Update member count
+        community.member_count = community.memberships.filter(is_active=True).count()
+        community.save()
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Successfully joined {community.name}',
+            'data': {
+                'id': community.id,
+                'name': community.name,
+                'description': community.description,
+                'member_count': community.member_count
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def get_user_communities(request):
+    """Get all communities the user is a member of"""
+    try:
+        memberships = CommunityMembership.objects.filter(
+            user=request.user, 
+            is_active=True
+        ).select_related('community')
+        
+        communities = []
+        for membership in memberships:
+            community = membership.community
+            communities.append({
+                'id': community.id,
+                'name': community.name,
+                'description': community.description,
+                'member_count': community.member_count,
+                'role': membership.role,
+                'joined_at': membership.joined_at.isoformat(),
+                'is_creator': community.creator == request.user,
+                'join_code': community.join_code,  # Include join code for members
+                'is_private': community.is_private
+            })
+            
+        return JsonResponse({
+            'status': 'success',
+            'data': communities
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def get_public_communities(request):
+    """Get public communities that user can join"""
+    try:
+        # Get communities user is not already a member of
+        user_community_ids = CommunityMembership.objects.filter(
+            user=request.user, 
+            is_active=True
+        ).values_list('community_id', flat=True)
+        
+        communities = Community.objects.filter(
+            is_private=False
+        ).exclude(
+            id__in=user_community_ids
+        ).annotate(
+            actual_member_count=Count('memberships', filter=Q(memberships__is_active=True))
+        )[:20]  # Limit to 20 communities
+        
+        result = []
+        for community in communities:
+            result.append({
+                'id': community.id,
+                'name': community.name,
+                'description': community.description,
+                'member_count': community.actual_member_count,
+                'created_at': community.created_at.isoformat()
+            })
+            
+        return JsonResponse({
+            'status': 'success',
+            'data': result
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+
+
+@login_required
+@csrf_protect
+@require_http_methods(["POST"])
+def send_message(request):
+    """Send a message to a community"""
+    try:
+        import json
+        data = json.loads(request.body)
+        community_id = data.get('community_id')
+        content = data.get('content', '').strip()
+        message_type = data.get('message_type', 'text')
+        metadata = data.get('metadata', {})
+        
+        if not community_id or not content:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Community ID and content are required'
+            }, status=400)
+            
+        # Verify user is a member of the community
+        try:
+            membership = CommunityMembership.objects.get(
+                community_id=community_id,
+                user=request.user,
+                is_active=True
+            )
+        except CommunityMembership.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'You are not a member of this community'
+            }, status=403)
+            
+        # Create message
+        message = CommunityMessage.objects.create(
+            community_id=community_id,
+            sender=request.user,
+            content=content,
+            message_type=message_type,
+            metadata=metadata
+        )
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Message sent successfully',
+            'data': {
+                'id': message.id,
+                'content': message.content,
+                'message_type': message.message_type,
+                'created_at': message.created_at.isoformat(),
+                'sender': request.user.username
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def get_community_messages(request, community_id):
+    """Get messages from a community"""
+    try:
+        # Verify user is a member of the community
+        try:
+            CommunityMembership.objects.get(
+                community_id=community_id,
+                user=request.user,
+                is_active=True
+            )
+        except CommunityMembership.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'You are not a member of this community'
+            }, status=403)
+            
+        # Get messages with pagination
+        page = int(request.GET.get('page', 1))
+        messages = CommunityMessage.objects.filter(
+            community_id=community_id
+        ).select_related('sender').order_by('-created_at')
+        
+        paginator = Paginator(messages, 50)  # 50 messages per page
+        page_obj = paginator.get_page(page)
+        
+        result = []
+        for message in page_obj:
+            result.append({
+                'id': message.id,
+                'content': message.content,
+                'message_type': message.message_type,
+                'metadata': message.metadata,
+                'sender': message.sender.username,
+                'sender_id': message.sender.id,
+                'created_at': message.created_at.isoformat(),
+                'is_pinned': message.is_pinned
+            })
+            
+        return JsonResponse({
+            'status': 'success',
+            'data': {
+                'messages': result,
+                'has_next': page_obj.has_next(),
+                'has_previous': page_obj.has_previous(),
+                'current_page': page,
+                'total_pages': paginator.num_pages
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+
+
+@login_required
+@csrf_protect
+@require_http_methods(["POST"])
+def leave_community(request):
+    """Leave a community"""
+    try:
+        import json
+        data = json.loads(request.body)
+        community_id = data.get('community_id')
+        
+        if not community_id:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Community ID is required'
+            }, status=400)
+            
+        try:
+            membership = CommunityMembership.objects.get(
+                community_id=community_id,
+                user=request.user,
+                is_active=True
+            )
+        except CommunityMembership.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'You are not a member of this community'
+            }, status=400)
+            
+        community = membership.community
+        
+        # Check if user is the creator and only admin
+        if community.creator == request.user:
+            admin_count = CommunityMembership.objects.filter(
+                community=community,
+                role='admin',
+                is_active=True
+            ).count()
+            
+            if admin_count <= 1:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'As the creator, you must assign another admin before leaving'
+                }, status=400)
+        
+        # Leave community
+        membership.is_active = False
+        membership.save()
+        
+        # Update member count
+        community.member_count = community.memberships.filter(is_active=True).count()
+        community.save()
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Successfully left {community.name}'
+        })
+        
     except Exception as e:
         return JsonResponse({
             'status': 'error',

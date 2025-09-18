@@ -35,6 +35,7 @@
     <meta name="theme-color" content="#dcfce7" />
   </head>
   <body>
+    {% csrf_token %}
     <!-- Header -->
     <header class="app-header">
       <img src="{% static 'icons/ecotrack_logo.png' %}" class="website-logo" />
@@ -302,7 +303,7 @@
           style="margin-bottom: 1rem"
           data-go-back="dashboard"
         >
-           Go Back
+          Go Back
         </button>
         <div class="card">
           <h2 class="card-title">🌱 Daily Eco-Check-in</h2>
@@ -325,6 +326,98 @@
         </div>
       </section>
 
+      <!-- Communities Tab -->
+      <section id="communities" class="tab-content">
+        <div class="card" id="community-actions-card">
+          <div class="community-actions" style="margin-bottom: 1.5rem">
+            <h2 class="card-title">Eco Communities</h2>
+            <button class="btn btn-primary" id="create-community-btn">
+              Create Community
+            </button>
+            <button class="btn btn-secondary" id="join-community-btn">
+              Join Community
+            </button>
+            <button class="btn btn-outline" id="browse-communities-btn">
+              Browse Public Communities
+            </button>
+          </div>
+        </div>
+
+        <!-- My Communities -->
+        <div class="card" id="my-communities-card">
+          <h3 class="card-title">My Communities</h3>
+          <div id="my-communities-container">
+            <div class="loading-state" id="communities-loading">
+              <p>Loading your communities...</p>
+            </div>
+            <div class="empty-state hidden" id="communities-empty">
+              <p>
+                You haven't joined any communities yet. Create one or join
+                existing communities to get started!
+              </p>
+            </div>
+            <div id="my-communities-list"></div>
+          </div>
+        </div>
+
+        <!-- Public Communities (hidden by default) -->
+        <div class="card hidden" id="public-communities-card">
+          <h3 class="card-title">Public Communities</h3>
+          <div id="public-communities-container">
+            <div id="public-communities-list"></div>
+          </div>
+        </div>
+
+        <!-- Community Chat (hidden by default) -->
+        <div class="card hidden" id="community-chat-card">
+          <div class="chat-header">
+            <button class="btn btn-outline" id="back-to-communities">
+              Back to Communities
+            </button>
+            <h3 class="card-title" id="chat-community-name">Community Name</h3>
+            <div class="community-info">
+              <span id="chat-member-count">0 members</span>
+              <button class="btn btn-outline btn-sm" id="leave-community-btn">
+                Leave
+              </button>
+            </div>
+          </div>
+
+          <div class="chat-messages" id="chat-messages">
+            <!-- Messages will be loaded here -->
+          </div>
+
+          <div class="chat-input-container">
+            <div class="message-type-selector">
+              <select id="message-type" class="form-select">
+                <option value="text">Message</option>
+                <option value="task">Eco Task</option>
+                <option value="achievement">🏆 Achievement</option>
+                <option value="announcement">📢 Announcement</option>
+              </select>
+              <button
+                class="btn btn-outline btn-sm"
+                id="share-join-code-btn"
+                title="Share join code"
+              >
+                Share Code
+              </button>
+            </div>
+            <div class="chat-input">
+              <textarea
+                id="message-input"
+                placeholder="Type your message..."
+                rows="2"
+                class="form-textarea"
+              ></textarea>
+              <button class="btn btn-primary" id="send-message-btn">
+                Send
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- All Achievements Tab (new) -->
       <section id="all-achievements" class="tab-content">
         <button
@@ -332,7 +425,7 @@
           style="margin-bottom: 1rem"
           data-go-back="profile"
         >
-           Go Back
+          Go Back
         </button>
         <div class="card">
           <h2 class="card-title">🏆 All Achievements</h2>
@@ -393,6 +486,22 @@
         </svg>
         <span>Ideas</span>
       </button>
+      <button class="nav-item" data-tab="communities">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"
+          />
+        </svg>
+        <span>Communities</span>
+      </button>
       <button class="nav-item" data-tab="profile">
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -422,6 +531,96 @@
       </div>
     </div>
 
+    <!-- Community Modals -->
+    <div id="create-community-modal" class="modal-overlay hidden">
+      <div class="modal-panel">
+        <h3 style="margin-bottom: 1.5rem">Create New Community</h3>
+        <form id="create-community-form">
+          <div class="form-group">
+            <label for="community-name">Community Name</label>
+            <input
+              type="text"
+              id="community-name"
+              class="form-input"
+              placeholder="Enter community name"
+              required
+              maxlength="100"
+            />
+          </div>
+          <div class="form-group">
+            <label for="community-description">Description</label>
+            <textarea
+              id="community-description"
+              class="form-textarea"
+              placeholder="Describe your community's eco-friendly goals..."
+              rows="3"
+            ></textarea>
+          </div>
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="community-private" />
+              <span>Private community (join by invite code only)</span>
+            </label>
+          </div>
+          <div class="modal-actions">
+            <button
+              type="button"
+              class="btn btn-outline"
+              id="cancel-create-community"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="btn btn-primary"
+              id="submit-create-community"
+            >
+              Create Community
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="join-community-modal" class="modal-overlay hidden">
+      <div class="modal-panel">
+        <h3 style="margin-bottom: 1.5rem">Join Community</h3>
+        <form id="join-community-form">
+          <div class="form-group">
+            <label for="join-code">Enter Join Code</label>
+            <input
+              type="text"
+              id="join-code"
+              class="form-input"
+              placeholder="Enter 8-character join code"
+              required
+              maxlength="8"
+              style="text-transform: uppercase"
+            />
+            <small class="form-help">
+              Ask community admins for the join code
+            </small>
+          </div>
+          <div class="modal-actions">
+            <button
+              type="button"
+              class="btn btn-outline"
+              id="cancel-join-community"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="btn btn-primary"
+              id="submit-join-community"
+            >
+              Join Community
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- Modals (Initially hidden) -->
     <div id="add-habit-modal" class="modal-overlay hidden">
       <!-- ... modal content ... -->
@@ -433,6 +632,7 @@
     <script src="{% static 'api.js' %}"></script>
     <script src="{% static 'script.js' %}"></script>
     <script src="{% static 'notifications.js' %}"></script>
+    <script src="{% static 'communities.js' %}"></script>
     <script>
       document.addEventListener("click", function (e) {
         const btn = e.target.closest("button[data-tab]");
@@ -456,6 +656,10 @@
           }
           if (window.app && tab === "all-achievements") {
             window.app.loadAchievements();
+          }
+          // Special logic for communities
+          if (window.communityManager && tab === "communities") {
+            window.communityManager.loadUserCommunities();
           }
         }
       });
