@@ -8,3 +8,9 @@
 - `python manage.py migrate`
 - `python manage.py runserver`
 - `python notification_scheduler.py` (Optional: required for notifications)
+
+
+
+
+### The webapp is available online at: [EcoTrack](https://saishgawade.pythonanywhere.com)
+### Note that the online version currently does not support push notifications.
