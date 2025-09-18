@@ -5,6 +5,7 @@ from pywebpush import webpush, WebPushException
 import json
 from datetime import datetime, timezone
 import pytz
+from google import genai
 
 
 class Command(BaseCommand):
@@ -54,6 +55,8 @@ class Command(BaseCommand):
             )
         )
         
+        
+        
         sent_count = 0
         failed_count = 0
         
@@ -70,9 +73,40 @@ class Command(BaseCommand):
                     continue
                 
                 # Create personalized notification payload
+                client = genai.Client()
+
+                prompt = f"""
+                    Generate 1 single short, catchy, and engaging notification messages strictly to encourage users to fill out the EcoTrack check-in form.
+                    EcoTrack is an app that helps users track their sustainability habits and promotes eco-friendly behavior. It includes features like:
+                    - Daily surveys to track eco actions 🌱
+                    - Personalized sustainability score 📊
+                    - AI chatbot to guide users 🤖
+                    - Personalized suggestions for greener living 💡
+                    - Achievements for completing surveys and taking eco-friendly actions 🎁
+                    - Daily streaks kept alive by submitting check-in everyday
+
+                    Ensure the notifications are:
+                    - under 60 characters
+                    - Friendly, heartwarming, motivating, and aligned with EcoTrack's eco-conscious mission
+                    - Include clear call-to-actions like "Share your thoughts", "fill now", "complete now"
+                    - Include relevant emojis for engagement
+                    - Highlight rewards or benefits if possible
+                    Give the message a human touch, with some warmth, inviting gesture and showing that you care for the user.
+                    The user's username is {user.username}, in case you need it.
+                """
+
+                try:
+                    response = client.models.generate_content(
+                        model="gemini-2.5-flash",
+                        contents=prompt,
+                    ).text
+                except:
+                    response = f"Hey {user.username}!, time to track your footprints"
+                    
+                
                 payload = {
-                    'title': 'EcoTrack Daily Reminder',
-                    'body': f'Hi {user.first_name or user.username}! Time to check in on your sustainability goals.',
+                    'title': 'Daily Check-in Reminder',
+                    'body': f'{response}',
                     'icon': '/static/icons/ecotrack_logo.png',
                     'badge': '/static/icons/favicon-32x32.png',
                     'tag': 'daily-reminder',
