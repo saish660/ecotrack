@@ -147,3 +147,7 @@ FIREBASE_STORAGE_BUCKET = os.getenv('FIREBASE_STORAGE_BUCKET', '')
 FIREBASE_MESSAGING_SENDER_ID = os.getenv('FIREBASE_MESSAGING_SENDER_ID', '')
 FIREBASE_APP_ID = os.getenv('FIREBASE_APP_ID', '')
 FIREBASE_VAPID_KEY = os.getenv('FIREBASE_VAPID_KEY', '')  # Firebase Web Push VAPID key
+
+# Cron dispatch security token (used by external schedulers like cron-job.org)
+# Set environment variable CRON_SECRET to a strong random value in production.
+CRON_SECRET = os.getenv('CRON_SECRET', '')

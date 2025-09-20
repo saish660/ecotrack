@@ -22,6 +22,8 @@ urlpatterns = [
     path("api/notifications/update-time", views.update_notification_time, name="update_notification_time"),
     path("api/notifications/test", views.test_notification, name="test_notification"),
     path("api/notifications/settings", views.get_notification_settings, name="get_notification_settings"),
+    # Cron dispatcher (external scheduler calls this every minute)
+    path("api/cron/dispatch", views.cron_dispatch, name="cron_dispatch"),
     
     # Community endpoints
     path("api/communities/create", views.create_community, name="create_community"),

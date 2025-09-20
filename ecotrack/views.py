@@ -1,8 +1,8 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.http import JsonResponse, HttpResponseRedirect
-from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.csrf import csrf_protect, csrf_exempt
 from django.views.decorators.http import require_http_methods
 from .models import User, Community, CommunityMembership, CommunityMessage, CommunityTask, TaskParticipation
 from django.db import IntegrityError
@@ -13,6 +13,10 @@ from uuid import uuid4
 from google import genai
 from django.db.models import Q, Count
 from django.core.paginator import Paginator
+from django.views.decorators.http import require_GET
+from django.conf import settings
+from .models import PushSubscription
+from .firebase_service import FCMService
 
 
 
@@ -377,6 +381,108 @@ from django.conf import settings
 from .models import PushSubscription
 from .firebase_service import FCMService
 from datetime import datetime, time
+
+
+# Cron-job.org dispatcher: call this every minute to send scheduled notifications
+@require_GET
+@csrf_exempt  # This is a server-to-server endpoint; we'll protect with a secret instead of CSRF
+def cron_dispatch(request):
+    # Simple bearer-like secret check: /api/cron/dispatch?token=... or Authorization: Bearer ...
+    token = request.GET.get('token') or request.headers.get('Authorization', '').replace('Bearer ', '').strip()
+    expected = getattr(settings, 'CRON_SECRET', '')
+    if not expected or token != expected:
+        return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=401)
+
+    # Use Django timezone utilities so we honor settings.TIME_ZONE
+    from django.utils import timezone
+    now = timezone.localtime(timezone.now())
+    current_time = time(hour=now.hour, minute=now.minute)
+    today = now.date()
+
+    # Pick subscriptions scheduled for this minute, active, and not already sent for this exact minute today
+    qs = PushSubscription.objects.filter(
+        is_active=True,
+        notification_time__hour=current_time.hour,
+        notification_time__minute=current_time.minute,
+    ).exclude(
+        last_sent_date=today,
+        last_sent_time=current_time,
+    )
+
+    total = qs.count()
+    sent = 0
+    failed = 0
+    failed_ids = []
+
+    # Batch by device type/token validity, prefer multicast for efficiency
+    tokens = []
+    subs_by_token = {}
+    for sub in qs:
+        if sub.has_valid_fcm_token():
+            token = sub.get_fcm_token()
+            tokens.append(token)
+            subs_by_token[token] = sub
+        else:
+            failed += 1
+            failed_ids.append(sub.id)
+            
+            
+    client = genai.Client()
+
+    prompt = f"""
+                Generate 1 single short, catchy, and engaging notification message strictly to encourage users to fill out the EcoTrack check-in form.
+                EcoTrack is an app that helps users track their sustainability habits and promotes eco-friendly behavior. It includes features like:
+                - Daily surveys to track eco actions 🌱
+                - Personalized sustainability score 📊
+                - AI chatbot to guide users 🤖
+                - Personalized suggestions for greener living 💡
+                - Achievements for completing surveys and taking eco-friendly actions 🎁
+                - Daily streaks kept alive by submitting check-in everyday
+                 Ensure the notifications are:
+                - under 60 characters
+                - Friendly, heartwarming, motivating, and aligned with EcoTrack's eco-conscious mission
+                - Include clear call-to-actions like "Share your thoughts", "fill now", "complete now"
+                - Include relevant emojis for engagement
+                - Highlight rewards or benefits if possible
+                Give the message a human touch, with some warmth, inviting gesture and showing that you care for the user.
+            """
+
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+        ).text
+    except:
+        response = f"Hey user!, time to track your footprints 🌱"
+
+    title = 'EcoTrack Reminder'
+    body = response
+
+    if tokens:
+        # Send per token to avoid environments where FCM batch (/batch) is blocked or returns 404
+        for t in tokens:
+            ok = FCMService.send_notification(t, title, body, data={'type': 'daily_reminder'})
+            sub = subs_by_token.get(t)
+            if ok:
+                sent += 1
+                if sub:
+                    sub.last_sent_date = today
+                    sub.last_sent_time = current_time
+                    sub.save(update_fields=['last_sent_date', 'last_sent_time', 'updated_at'])
+            else:
+                failed += 1
+                if sub:
+                    failed_ids.append(sub.id)
+
+    return JsonResponse({
+        'status': 'success',
+        'time': current_time.strftime('%H:%M'),
+        'date': today.isoformat(),
+        'total_candidates': total,
+        'sent': sent,
+        'failed': failed,
+        'failed_ids': failed_ids,
+    })
 
 
 @login_required
