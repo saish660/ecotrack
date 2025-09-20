@@ -43,15 +43,11 @@ class Command(BaseCommand):
         current_hour = current_time.hour
         current_minute = current_time.minute
         
-        # Get subscriptions that match the current hour and minute exactly and have valid FCM tokens
+        # Get subscriptions that match the current hour and minute exactly
         subscriptions = PushSubscription.objects.filter(
             is_active=True,
             notification_time__hour=current_hour,
             notification_time__minute=current_minute
-        ).exclude(
-            fcm_token__isnull=True
-        ).exclude(
-            fcm_token__exact=''
         )
         
         if not subscriptions.exists():
@@ -122,20 +118,9 @@ class Command(BaseCommand):
                     sent_count += 1
                     continue
                 
-                # Check if FCM token exists
-                fcm_token = subscription.get_fcm_token()
-                if not fcm_token or not fcm_token.strip():
-                    self.stdout.write(
-                        self.style.WARNING(f'Skipping {user.username} - no FCM token (user needs to resubscribe)')
-                    )
-                    # Mark subscription as inactive since it has no token
-                    subscription.is_active = False
-                    subscription.save()
-                    continue
-                
                 # Send FCM notification
                 success = FCMService.send_notification(
-                    token=fcm_token,
+                    token=subscription.get_fcm_token(),
                     title='Daily Check-in Reminder',
                     body=response,
                     data={
@@ -184,6 +169,92 @@ class Command(BaseCommand):
             self.style.SUCCESS(
                 f'\nSummary:'
                 f'\n- Sent: {sent_count} FCM notifications'
+                f'\n- Failed: {failed_count} notifications'
+                f'\n- Total processed: {sent_count + failed_count}'
+            )
+        )
+                        contents=prompt,
+                    ).text
+                except:
+                    response = f"Hey {user.username}!, time to track your footprints"
+                    
+                
+                payload = {
+                    'title': 'Daily Check-in Reminder',
+                    'body': f'{response}',
+                    'icon': '/static/icons/ecotrack_logo.png',
+                    'badge': '/static/icons/favicon-32x32.png',
+                    'tag': 'daily-reminder',
+                    'data': {
+                        'url': '/',
+                        'timestamp': str(datetime.now())
+                    },
+                    'actions': [
+                        {
+                            'action': 'open_app',
+                            'title': 'Open EcoTrack',
+                            'icon': '/static/icons/favicon-32x32.png'
+                        }
+                    ]
+                }
+                
+                if dry_run:
+                    self.stdout.write(
+                        f'Would send notification to: {user.username} at {subscription.notification_time}'
+                    )
+                    sent_count += 1
+                    continue
+                
+                # Send notification
+                webpush(
+                    subscription_info=subscription.get_subscription_info(),
+                    data=json.dumps(payload),
+                    vapid_private_key=settings.VAPID_PRIVATE_KEY,
+                    vapid_claims={
+                        "sub": settings.VAPID_CLAIMS_EMAIL,
+                    }
+                )
+                
+                self.stdout.write(
+                    self.style.SUCCESS(f'Sent notification to: {user.username}')
+                )
+                # Update last sent markers
+                subscription.last_sent_date = today_date
+                subscription.last_sent_time = subscription.notification_time
+                subscription.save(update_fields=["last_sent_date", "last_sent_time", "updated_at"])
+                sent_count += 1
+                
+            except WebPushException as ex:
+                self.stdout.write(
+                    self.style.ERROR(
+                        f'Failed to send notification to user {subscription.user.username}: {str(ex)}'
+                    )
+                )
+                failed_count += 1
+                
+                # If the subscription is invalid, deactivate it
+                if ex.response and ex.response.status_code in [404, 410]:
+                    subscription.is_active = False
+                    subscription.save()
+                    self.stdout.write(
+                        self.style.WARNING(
+                            f'Deactivated invalid subscription for user: {subscription.user.username}'
+                        )
+                    )
+                    
+            except Exception as ex:
+                self.stdout.write(
+                    self.style.ERROR(
+                        f'Unexpected error sending notification to user {subscription.user.username}: {str(ex)}'
+                    )
+                )
+                failed_count += 1
+        
+        # Summary
+        self.stdout.write(
+            self.style.SUCCESS(
+                f'\nSummary:'
+                f'\n- Sent: {sent_count} notifications'
                 f'\n- Failed: {failed_count} notifications'
                 f'\n- Total processed: {sent_count + failed_count}'
             )

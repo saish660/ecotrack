@@ -134,11 +134,16 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# VAPID keys for Web Push notifications
-# Use a file path for the private key PEM to avoid deserialization issues.
-VAPID_PRIVATE_KEY = str(BASE_DIR / 'DjangoProject' / 'vapid_private.pem')
+# Firebase configuration for FCM (Firebase Cloud Messaging)
+# Path to Firebase service account JSON file
+FIREBASE_SERVICE_ACCOUNT_KEY = str(BASE_DIR / 'ecotrack-fcm-firebase-adminsdk-fbsvc-94a405723b.json')
 
-VAPID_PUBLIC_KEY = 'BDYDIXQgu3-hMC86UOet8BAU0LfoBq1WYvX3orjS65dI9sCY0FNXSg53dhoipZ5T6OHbSNHrJAhnAd3c1xIBM_4'
-
-# Email for VAPID claims
-VAPID_CLAIMS_EMAIL = "mailto:admin@ecotrack.com"
+# Firebase web app configuration (for frontend)
+# These will be provided after you complete the Firebase setup
+FIREBASE_API_KEY = os.getenv('FIREBASE_API_KEY', '')
+FIREBASE_AUTH_DOMAIN = os.getenv('FIREBASE_AUTH_DOMAIN', '')
+FIREBASE_PROJECT_ID = os.getenv('FIREBASE_PROJECT_ID', '')
+FIREBASE_STORAGE_BUCKET = os.getenv('FIREBASE_STORAGE_BUCKET', '')
+FIREBASE_MESSAGING_SENDER_ID = os.getenv('FIREBASE_MESSAGING_SENDER_ID', '')
+FIREBASE_APP_ID = os.getenv('FIREBASE_APP_ID', '')
+FIREBASE_VAPID_KEY = os.getenv('FIREBASE_VAPID_KEY', '')  # Firebase Web Push VAPID key

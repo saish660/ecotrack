@@ -1178,10 +1178,6 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   font-weight: 500;
 }
 
-#test-notification-btn {
-  display: none !important;
-}
-
 /* Community Styles - Mobile First */
 .community-actions {
   display: flex;
@@ -1410,12 +1406,7 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.message.text {
-  /* border-left-color: var(--primary-color); */
-}
-
 .message.task {
-  /* border-left-color: var(--secondary-color); */
   background: #eff6ff;
 }
 
@@ -1877,4 +1868,8 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 #chat-community-name {
   font-size: 1.5rem;
   margin-top: 10px;
+}
+
+#test-notification-btn {
+  /* display: none !important; */
 }

@@ -74,3 +74,4 @@ yarn-error.log*
 
 venv
 DjangoProject/settings.py
+ecotrack-fcm-firebase-adminsdk-fbsvc-94a405723b.json

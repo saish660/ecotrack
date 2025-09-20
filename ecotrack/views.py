@@ -374,8 +374,8 @@ def get_suggestions(request):
 # Push Notification Views
 import json
 from django.conf import settings
-from pywebpush import webpush, WebPushException
 from .models import PushSubscription
+from .firebase_service import FCMService
 from datetime import datetime, time
 
 
@@ -383,17 +383,18 @@ from datetime import datetime, time
 @csrf_protect
 @require_http_methods(["POST"])
 def subscribe_push(request):
-    """Subscribe user for push notifications"""
+    """Subscribe user for push notifications using FCM"""
     try:
         data = json.loads(request.body)
         
-        subscription_info = data.get('subscription')
+        fcm_token = data.get('fcmToken')
+        device_type = data.get('deviceType', 'web')
         notification_time = data.get('notificationTime', '09:00')  # Default to 9:00 AM
         
-        if not subscription_info:
+        if not fcm_token:
             return JsonResponse({
                 'status': 'error',
-                'message': 'Subscription info is required'
+                'message': 'FCM token is required'
             }, status=400)
         
         # Parse notification time
@@ -402,13 +403,19 @@ def subscribe_push(request):
         except ValueError:
             time_obj = datetime.strptime('09:00', '%H:%M').time()
         
+        # Validate FCM token
+        if not FCMService.validate_token(fcm_token):
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid FCM token'
+            }, status=400)
+        
         # Create or update push subscription
         push_subscription, created = PushSubscription.objects.update_or_create(
             user=request.user,
             defaults={
-                'endpoint': subscription_info['endpoint'],
-                'p256dh_key': subscription_info['keys']['p256dh'],
-                'auth_key': subscription_info['keys']['auth'],
+                'fcm_token': fcm_token,
+                'device_type': device_type,
                 'notification_time': time_obj,
                 'is_active': True
             }
@@ -515,43 +522,39 @@ def update_notification_time(request):
 @csrf_protect
 @require_http_methods(["POST"])
 def test_notification(request):
-    """Send a test push notification to the user"""
+    """Send a test push notification to the user using FCM"""
     try:
         push_subscription = PushSubscription.objects.get(user=request.user, is_active=True)
         
-        # Prepare notification payload
-        payload = {
-            'title': 'EcoTrack Test Notification',
-            'body': 'This is a test notification from EcoTrack!',
-            'icon': '/static/icons/ecotrack_logo.png',
-            'badge': '/static/icons/favicon-32x32.png',
-            'tag': 'test-notification',
-            'data': {
+        # Ensure we have a valid token
+        token = push_subscription.get_fcm_token()
+        if not token:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'No FCM token found. Please re-enable notifications to register your device.'
+            }, status=400)
+
+        # Send FCM notification
+        success = FCMService.send_notification(
+            token=token,
+            title='EcoTrack Test Notification',
+            body='This is a test notification from EcoTrack!',
+            data={
                 'url': '/',
-                'timestamp': str(datetime.now())
+                'timestamp': str(datetime.now()),
+                'type': 'test'
             }
-        }
+        )
         
-        # Send push notification
-        try:
-            webpush(
-                subscription_info=push_subscription.get_subscription_info(),
-                data=json.dumps(payload),
-                vapid_private_key=settings.VAPID_PRIVATE_KEY,
-                vapid_claims={
-                    "sub": settings.VAPID_CLAIMS_EMAIL,
-                }
-            )
-            
+        if success:
             return JsonResponse({
                 'status': 'success',
                 'message': 'Test notification sent successfully!'
             })
-            
-        except WebPushException as ex:
+        else:
             return JsonResponse({
                 'status': 'error',
-                'message': f'Failed to send notification: {str(ex)}'
+                'message': 'Failed to send test notification. Please check your subscription.'
             }, status=500)
         
     except PushSubscription.DoesNotExist:
@@ -572,12 +575,22 @@ def get_notification_settings(request):
     try:
         try:
             push_subscription = PushSubscription.objects.get(user=request.user)
+            is_subscribed = push_subscription.is_active and push_subscription.has_valid_fcm_token()
             return JsonResponse({
                 'status': 'success',
                 'data': {
-                    'isSubscribed': push_subscription.is_active,
+                    'isSubscribed': is_subscribed,
                     'notificationTime': push_subscription.notification_time.strftime('%H:%M'),
-                    'vapidPublicKey': settings.VAPID_PUBLIC_KEY
+                    'deviceType': push_subscription.device_type,
+                    'firebaseConfig': {
+                        'apiKey': getattr(settings, 'FIREBASE_API_KEY', ''),
+                        'authDomain': getattr(settings, 'FIREBASE_AUTH_DOMAIN', ''),
+                        'projectId': getattr(settings, 'FIREBASE_PROJECT_ID', ''),
+                        'storageBucket': getattr(settings, 'FIREBASE_STORAGE_BUCKET', ''),
+                        'messagingSenderId': getattr(settings, 'FIREBASE_MESSAGING_SENDER_ID', ''),
+                        'appId': getattr(settings, 'FIREBASE_APP_ID', ''),
+                        'vapidKey': getattr(settings, 'FIREBASE_VAPID_KEY', '')
+                    }
                 }
             })
         except PushSubscription.DoesNotExist:
@@ -586,7 +599,16 @@ def get_notification_settings(request):
                 'data': {
                     'isSubscribed': False,
                     'notificationTime': '09:00',
-                    'vapidPublicKey': settings.VAPID_PUBLIC_KEY
+                    'deviceType': 'web',
+                    'firebaseConfig': {
+                        'apiKey': getattr(settings, 'FIREBASE_API_KEY', ''),
+                        'authDomain': getattr(settings, 'FIREBASE_AUTH_DOMAIN', ''),
+                        'projectId': getattr(settings, 'FIREBASE_PROJECT_ID', ''),
+                        'storageBucket': getattr(settings, 'FIREBASE_STORAGE_BUCKET', ''),
+                        'messagingSenderId': getattr(settings, 'FIREBASE_MESSAGING_SENDER_ID', ''),
+                        'appId': getattr(settings, 'FIREBASE_APP_ID', ''),
+                        'vapidKey': getattr(settings, 'FIREBASE_VAPID_KEY', '')
+                    }
                 }
             })
             

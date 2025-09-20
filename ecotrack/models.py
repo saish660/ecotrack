@@ -42,8 +42,12 @@ class User(AbstractUser):
 class PushSubscription(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='push_subscription')
     endpoint = models.TextField()
-    p256dh_key = models.TextField()
+    p256dh_key = models.TextField()  
     auth_key = models.TextField()
+    # FCM token for Firebase Cloud Messaging
+    fcm_token = models.TextField(blank=True, null=True)
+    # Device/platform information for better targeting
+    device_type = models.CharField(max_length=50, default='web', blank=True, null=True)  # 'web', 'android', 'ios'
     notification_time = models.TimeField(default=datetime.strptime('09:00', '%H:%M').time())  # Default to 9:00 AM
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -64,6 +68,15 @@ class PushSubscription(models.Model):
                 'auth': self.auth_key
             }
         }
+    
+    def get_fcm_token(self):
+        """Return FCM token for Firebase messaging"""
+        return self.fcm_token or ''
+    
+    def has_valid_fcm_token(self):
+        """Check if subscription has a valid FCM token"""
+        token = self.get_fcm_token()
+        return bool(token and token.strip())
 
 
 class Community(models.Model):
