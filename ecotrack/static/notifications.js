@@ -3,8 +3,13 @@
 
 class NotificationManager {
   constructor() {
-    this.isAndroidApp = /Android/i.test(navigator.userAgent) && (window.ReactNativeWebView || window.OneSignal || window.Median);
-    this.isSupported = ("serviceWorker" in navigator && "PushManager" in window) && !this.isAndroidApp;
+    this.isAndroidApp =
+      /Android/i.test(navigator.userAgent) &&
+      (window.ReactNativeWebView || window.OneSignal || window.Median);
+    this.isSupported =
+      "serviceWorker" in navigator &&
+      "PushManager" in window &&
+      !this.isAndroidApp;
     this.registration = null;
     this.subscription = null;
     this.vapidPublicKey = null;
@@ -24,14 +29,20 @@ class NotificationManager {
   async init() {
     console.log("NotificationManager initializing...");
     console.log("Detected Android app wrapper:", !!this.isAndroidApp);
-    console.log("Push notifications supported (web push path):", this.isSupported);
+    console.log(
+      "Push notifications supported (web push path):",
+      this.isSupported
+    );
     console.log("Current notification permission:", Notification.permission);
 
     this.initializeElements();
     if (this.isAndroidApp) {
       // In Android app, push is managed by native (OneSignal). Skip SW.
       await this.loadNotificationSettings();
-      this.showStatus("Notifications are managed by the Android app.", "success");
+      this.showStatus(
+        "Notifications are managed by the Android app.",
+        "success"
+      );
       this.updateUIVisibility(true);
       // Attempt passive OneSignal registration if available in window
       this.tryOneSignalSubscribe();
@@ -277,7 +288,9 @@ class NotificationManager {
         playerId = await new Promise((resolve) => {
           window.OneSignal.push(function () {
             try {
-              window.OneSignal.getUserId().then((id) => resolve(id)).catch(() => resolve(null));
+              window.OneSignal.getUserId()
+                .then((id) => resolve(id))
+                .catch(() => resolve(null));
             } catch (e) {
               resolve(null);
             }
@@ -285,12 +298,19 @@ class NotificationManager {
         });
       }
       if (!playerId) {
-        if (showFeedback) this.showStatus("Waiting for app to register notifications…", "warning");
+        if (showFeedback)
+          this.showStatus(
+            "Waiting for app to register notifications…",
+            "warning"
+          );
         return;
       }
       const res = await fetch("/api/notifications/subscribe", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-CSRFToken": this.getCSRFToken() },
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": this.getCSRFToken(),
+        },
         body: JSON.stringify({
           provider: "onesignal",
           oneSignalPlayerId: playerId,
@@ -300,12 +320,20 @@ class NotificationManager {
       });
       const json = await res.json();
       if (json.status === "success") {
-        if (showFeedback) this.showStatus("Android notifications enabled via OneSignal.", "success");
+        if (showFeedback)
+          this.showStatus(
+            "Android notifications enabled via OneSignal.",
+            "success"
+          );
       } else if (showFeedback) {
-        this.showStatus(`Failed to enable notifications: ${json.message}`, "error");
+        this.showStatus(
+          `Failed to enable notifications: ${json.message}`,
+          "error"
+        );
       }
     } catch (e) {
-      if (showFeedback) this.showStatus("Error enabling notifications.", "error");
+      if (showFeedback)
+        this.showStatus("Error enabling notifications.", "error");
       console.error("OneSignal subscribe error", e);
     }
   }

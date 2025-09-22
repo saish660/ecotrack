@@ -11,8 +11,13 @@ import {
 
 class FCMNotificationManager {
   constructor() {
-    this.isAndroidApp = /Android/i.test(navigator.userAgent) && (window.ReactNativeWebView || window.OneSignal || window.Median);
-    this.isSupported = ("serviceWorker" in navigator && "PushManager" in window) && !this.isAndroidApp;
+    this.isAndroidApp =
+      /Android/i.test(navigator.userAgent) &&
+      (window.ReactNativeWebView || window.OneSignal || window.Median);
+    this.isSupported =
+      "serviceWorker" in navigator &&
+      "PushManager" in window &&
+      !this.isAndroidApp;
     this.firebaseApp = null;
     this.messaging = null;
     this.fcmToken = null;
@@ -33,13 +38,19 @@ class FCMNotificationManager {
   async init() {
     console.log("FCM NotificationManager initializing...");
     console.log("Detected Android app wrapper:", !!this.isAndroidApp);
-    console.log("Push notifications supported (web push path):", this.isSupported);
+    console.log(
+      "Push notifications supported (web push path):",
+      this.isSupported
+    );
     console.log("Current notification permission:", Notification.permission);
 
     this.initializeElements();
     await this.loadNotificationSettings();
     if (this.isAndroidApp) {
-      this.showStatus("Notifications are managed by the Android app.", "success");
+      this.showStatus(
+        "Notifications are managed by the Android app.",
+        "success"
+      );
       this.updateUIVisibility(true);
       this.setupEventListeners();
       return;
