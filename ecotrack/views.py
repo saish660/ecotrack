@@ -17,6 +17,7 @@ from django.views.decorators.http import require_GET
 from django.conf import settings
 from .models import PushSubscription
 from .firebase_service import FCMService
+from .onesignal_service import OneSignalService
 
 
 
@@ -415,10 +416,17 @@ def cron_dispatch(request):
     failed_ids = []
 
     # Batch by device type/token validity, prefer multicast for efficiency
-    tokens = []
+    tokens = []  # FCM tokens for web/native FCM path
     subs_by_token = {}
+    onesignal_ids = []
+    subs_by_os = {}
     for sub in qs:
-        if sub.has_valid_fcm_token():
+        # Prefer OneSignal if configured
+        if sub.provider == 'onesignal' and sub.get_onesignal_player_id():
+            pid = sub.get_onesignal_player_id()
+            onesignal_ids.append(pid)
+            subs_by_os[pid] = sub
+        elif sub.has_valid_fcm_token():
             token = sub.get_fcm_token()
             tokens.append(token)
             subs_by_token[token] = sub
@@ -461,8 +469,15 @@ def cron_dispatch(request):
     if tokens:
         # Send per token to avoid environments where FCM batch (/batch) is blocked or returns 404
         for t in tokens:
-            ok = FCMService.send_notification(t, title, body, data={'type': 'daily_reminder'})
             sub = subs_by_token.get(t)
+            platform = 'android' if (sub and sub.device_type == 'android') else 'web'
+            ok = FCMService.send_notification(
+                t,
+                title,
+                body,
+                data={'type': 'daily_reminder'},
+                platform=platform
+            )
             if ok:
                 sent += 1
                 if sub:
@@ -473,6 +488,18 @@ def cron_dispatch(request):
                 failed += 1
                 if sub:
                     failed_ids.append(sub.id)
+
+    # Send via OneSignal for those subscriptions
+    if onesignal_ids:
+        result = OneSignalService.send_bulk(onesignal_ids, title, body, data={'type': 'daily_reminder'})
+        sent += result.get('success_count', 0)
+        failed += result.get('failure_count', 0)
+        for pid in onesignal_ids:
+            sub = subs_by_os.get(pid)
+            if sub and result.get('failure_count', 0) == 0:
+                sub.last_sent_date = today
+                sub.last_sent_time = current_time
+                sub.save(update_fields=['last_sent_date', 'last_sent_time', 'updated_at'])
 
     return JsonResponse({
         'status': 'success',
@@ -494,13 +521,15 @@ def subscribe_push(request):
         data = json.loads(request.body)
         
         fcm_token = data.get('fcmToken')
+        onesignal_player_id = data.get('oneSignalPlayerId') or data.get('onesignalPlayerId') or data.get('playerId')
+        provider = data.get('provider') or ('onesignal' if onesignal_player_id else ('fcm' if fcm_token else 'webpush'))
         device_type = data.get('deviceType', 'web')
         notification_time = data.get('notificationTime', '09:00')  # Default to 9:00 AM
         
-        if not fcm_token:
+        if not (fcm_token or onesignal_player_id):
             return JsonResponse({
                 'status': 'error',
-                'message': 'FCM token is required'
+                'message': 'Push token is required (FCM or OneSignal)'
             }, status=400)
         
         # Parse notification time
@@ -510,17 +539,20 @@ def subscribe_push(request):
             time_obj = datetime.strptime('09:00', '%H:%M').time()
         
         # Validate FCM token
-        if not FCMService.validate_token(fcm_token):
-            return JsonResponse({
-                'status': 'error',
-                'message': 'Invalid FCM token'
-            }, status=400)
+        if provider == 'fcm' and fcm_token:
+            if not FCMService.validate_token(fcm_token):
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Invalid FCM token'
+                }, status=400)
         
         # Create or update push subscription
         push_subscription, created = PushSubscription.objects.update_or_create(
             user=request.user,
             defaults={
                 'fcm_token': fcm_token,
+                'onesignal_player_id': onesignal_player_id,
+                'provider': provider,
                 'device_type': device_type,
                 'notification_time': time_obj,
                 'is_active': True
@@ -632,25 +664,29 @@ def test_notification(request):
     try:
         push_subscription = PushSubscription.objects.get(user=request.user, is_active=True)
         
-        # Ensure we have a valid token
-        token = push_subscription.get_fcm_token()
-        if not token:
-            return JsonResponse({
-                'status': 'error',
-                'message': 'No FCM token found. Please re-enable notifications to register your device.'
-            }, status=400)
-
-        # Send FCM notification
-        success = FCMService.send_notification(
-            token=token,
-            title='EcoTrack Test Notification',
-            body='This is a test notification from EcoTrack!',
-            data={
-                'url': '/',
-                'timestamp': str(datetime.now()),
-                'type': 'test'
-            }
-        )
+        success = False
+        if push_subscription.provider == 'onesignal' and push_subscription.get_onesignal_player_id():
+            success = OneSignalService.send_notification(
+                player_id=push_subscription.get_onesignal_player_id(),
+                title='EcoTrack Test Notification',
+                body='This is a test notification from EcoTrack!',
+                data={'url': '/', 'timestamp': str(datetime.now()), 'type': 'test'}
+            )
+        else:
+            # Fallback to FCM direct send
+            token = push_subscription.get_fcm_token()
+            if not token:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'No push token found. Please re-enable notifications to register your device.'
+                }, status=400)
+            success = FCMService.send_notification(
+                token=token,
+                title='EcoTrack Test Notification',
+                body='This is a test notification from EcoTrack!',
+                data={'url': '/', 'timestamp': str(datetime.now()), 'type': 'test'},
+                platform='android' if push_subscription.device_type == 'android' else 'web'
+            )
         
         if success:
             return JsonResponse({
