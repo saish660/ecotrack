@@ -32,7 +32,7 @@ class FCMService:
                 raise
     
     @classmethod
-    def send_notification(cls, token: str, title: str, body: str, data: Optional[Dict] = None, platform: str = 'web') -> bool:
+    def send_notification(cls, token: str, title: str, body: str, data: Optional[Dict] = None) -> bool:
         """
         Send a single FCM notification.
         
@@ -62,27 +62,13 @@ class FCMService:
             # Create data payload if provided
             data_payload = data if data else {}
             
-            # Platform-specific configuration
-            android_cfg = None
-            webpush_cfg = None
-            apns_cfg = None
-
-            # Android
-            if platform == 'android':
-                android_cfg = messaging.AndroidConfig(
-                    priority='high',
-                    notification=messaging.AndroidNotification(
-                        title=title,
-                        body=body,
-                        channel_id=getattr(settings, 'FIREBASE_ANDROID_CHANNEL_ID', 'default'),
-                        icon='ic_notification',
-                        color='#1B5E20',
-                    ),
-                    ttl=3600,
-                )
-            # Web
-            else:
-                webpush_cfg = messaging.WebpushConfig(
+            # Create message
+            message = messaging.Message(
+                notification=notification,
+                data=data_payload,
+                token=token,
+                # Web-specific configuration
+                webpush=messaging.WebpushConfig(
                     notification=messaging.WebpushNotification(
                         title=title,
                         body=body,
@@ -100,15 +86,6 @@ class FCMService:
                         'TTL': '3600'  # Time to live in seconds
                     }
                 )
-
-            # Build message
-            message = messaging.Message(
-                notification=notification,
-                data=data_payload,
-                token=token,
-                android=android_cfg,
-                webpush=webpush_cfg,
-                apns=apns_cfg,
             )
             
             # Send message
@@ -136,7 +113,7 @@ class FCMService:
             return False
     
     @classmethod
-    def send_multicast(cls, tokens: List[str], title: str, body: str, data: Optional[Dict] = None, platform: str = 'web') -> Dict:
+    def send_multicast(cls, tokens: List[str], title: str, body: str, data: Optional[Dict] = None) -> Dict:
         """
         Send FCM notification to multiple tokens.
         
@@ -164,22 +141,12 @@ class FCMService:
             # Create data payload if provided
             data_payload = data if data else {}
             
-            android_cfg = None
-            webpush_cfg = None
-            if platform == 'android':
-                android_cfg = messaging.AndroidConfig(
-                    priority='high',
-                    notification=messaging.AndroidNotification(
-                        title=title,
-                        body=body,
-                        channel_id=getattr(settings, 'FIREBASE_ANDROID_CHANNEL_ID', 'default'),
-                        icon='ic_notification',
-                        color='#1B5E20',
-                    ),
-                    ttl=3600,
-                )
-            else:
-                webpush_cfg = messaging.WebpushConfig(
+            # Create multicast message
+            message = messaging.MulticastMessage(
+                notification=notification,
+                data=data_payload,
+                tokens=tokens,
+                webpush=messaging.WebpushConfig(
                     notification=messaging.WebpushNotification(
                         title=title,
                         body=body,
@@ -197,14 +164,6 @@ class FCMService:
                         'TTL': '3600'
                     }
                 )
-
-            # Create multicast message
-            message = messaging.MulticastMessage(
-                notification=notification,
-                data=data_payload,
-                tokens=tokens,
-                android=android_cfg,
-                webpush=webpush_cfg,
             )
             
             # Send multicast message

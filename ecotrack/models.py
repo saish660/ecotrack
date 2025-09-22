@@ -41,18 +41,13 @@ class User(AbstractUser):
 
 class PushSubscription(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='push_subscription')
-    # Web Push (VAPID) fields — optional so native (Android/iOS) can register without them
-    endpoint = models.TextField(blank=True, null=True)
-    p256dh_key = models.TextField(blank=True, null=True)  
-    auth_key = models.TextField(blank=True, null=True)
+    endpoint = models.TextField()
+    p256dh_key = models.TextField()  
+    auth_key = models.TextField()
     # FCM token for Firebase Cloud Messaging
     fcm_token = models.TextField(blank=True, null=True)
-    # OneSignal specific player ID
-    onesignal_player_id = models.TextField(blank=True, null=True)
     # Device/platform information for better targeting
     device_type = models.CharField(max_length=50, default='web', blank=True, null=True)  # 'web', 'android', 'ios'
-    # Provider: 'webpush' | 'fcm' | 'onesignal'
-    provider = models.CharField(max_length=20, default='webpush')
     notification_time = models.TimeField(default=datetime.strptime('09:00', '%H:%M').time())  # Default to 9:00 AM
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -82,9 +77,6 @@ class PushSubscription(models.Model):
         """Check if subscription has a valid FCM token"""
         token = self.get_fcm_token()
         return bool(token and token.strip())
-
-    def get_onesignal_player_id(self):
-        return self.onesignal_player_id or ''
 
 
 class Community(models.Model):
