@@ -181,8 +181,13 @@ class FCMNotificationManager {
     if (this.toggle) {
       this.toggle.addEventListener("change", async (e) => {
         if (e.target.checked) {
-          console.log("Toggle switched on, subscribing to FCM...");
-          await this.subscribeToNotifications();
+          if (this.isAndroidApp) {
+            console.log("Toggle ON on Android: enabling via OneSignal...");
+            await this.tryOneSignalSubscribe(true);
+          } else {
+            console.log("Toggle switched on, subscribing to FCM...");
+            await this.subscribeToNotifications();
+          }
         } else {
           await this.unsubscribeFromNotifications();
         }
@@ -509,6 +514,76 @@ class FCMNotificationManager {
       return "granted";
     }
   }
+
+  async tryOneSignalSubscribe(showFeedback = false) {
+    try {
+      let playerId = null;
+      // If OneSignal Web SDK is injected, attempt to resolve the player ID
+      if (window.OneSignal && Array.isArray(window.OneSignal)) {
+        playerId = await new Promise((resolve) => {
+          try {
+            window.OneSignal.push(function () {
+              try {
+                window.OneSignal
+                  .getUserId()
+                  .then((id) => resolve(id))
+                  .catch(() => resolve(null));
+              } catch (e) {
+                resolve(null);
+              }
+            });
+          } catch (e) {
+            resolve(null);
+          }
+        });
+      }
+
+      if (!playerId) {
+        if (showFeedback) {
+          this.showStatus(
+            "Waiting for the app to register notifications…",
+            "warning"
+          );
+        }
+        return;
+      }
+
+      const res = await fetch("/api/notifications/subscribe", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": this.getCSRFToken(),
+        },
+        body: JSON.stringify({
+          provider: "onesignal",
+          oneSignalPlayerId: playerId,
+          deviceType: "android",
+          notificationTime: this.timeInput ? this.timeInput.value : "09:00",
+        }),
+      });
+      const json = await res.json();
+      if (json.status === "success") {
+        this.updateUIVisibility(true);
+        if (this.toggle) this.toggle.checked = true;
+        if (showFeedback)
+          this.showStatus(
+            "Android notifications enabled via OneSignal.",
+            "success"
+          );
+      } else {
+        if (this.toggle) this.toggle.checked = false;
+        if (showFeedback)
+          this.showStatus(
+            `Failed to enable notifications: ${json.message}`,
+            "error"
+          );
+      }
+    } catch (e) {
+      if (this.toggle) this.toggle.checked = false;
+      if (showFeedback) this.showStatus("Error enabling notifications.", "error");
+      console.error("OneSignal subscribe error", e);
+    }
+  }
 }
 
 // Initialize the notification manager when the DOM is loaded
@@ -558,3 +633,43 @@ style.textContent = `
   }
 `;
 document.head.appendChild(style);
+
+// Optional native bridge: allow Android wrapper to directly register OneSignal player ID
+window.registerOneSignalPlayerId = async function (playerId, notificationTime) {
+  try {
+    if (!playerId) {
+      console.warn("registerOneSignalPlayerId called without playerId");
+      return { status: "error", message: "Missing playerId" };
+    }
+    const timeInput = document.getElementById("notification-time");
+    const res = await fetch("/api/notifications/subscribe", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")?.value || "",
+      },
+      body: JSON.stringify({
+        provider: "onesignal",
+        oneSignalPlayerId: playerId,
+        deviceType: "android",
+        notificationTime:
+          notificationTime || (timeInput ? timeInput.value : "09:00"),
+      }),
+    });
+    const json = await res.json();
+    if (json.status === "success" && window.notificationManager) {
+      window.notificationManager.updateUIVisibility(true);
+      if (window.notificationManager.toggle) {
+        window.notificationManager.toggle.checked = true;
+      }
+      window.notificationManager.showStatus(
+        "Android notifications enabled via OneSignal.",
+        "success"
+      );
+    }
+    return json;
+  } catch (e) {
+    console.error("registerOneSignalPlayerId error", e);
+    return { status: "error", message: e?.message || "Unknown error" };
+  }
+};
