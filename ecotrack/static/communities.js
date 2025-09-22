@@ -25,6 +25,8 @@ class CommunityManager {
       .getElementById("browse-communities-btn")
       ?.addEventListener("click", () => {
         this.togglePublicCommunities();
+
+        alert("Good morning");
       });
 
     // Modal forms
