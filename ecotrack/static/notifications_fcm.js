@@ -1,17 +1,23 @@
 // Firebase Cloud Messaging (FCM) JavaScript
 // Handles Firebase SDK initialization, FCM token registration, and UI interactions
 
-// Import Firebase SDK modules
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
-import {
-  getMessaging,
-  getToken,
-  onMessage,
-} from "https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging.js";
+// Firebase SDK will be imported dynamically only on web browsers (avoid ES modules in Android WebView)
+let initializeApp;
+let getMessaging;
+let getToken;
+let onMessage;
 
 class FCMNotificationManager {
   constructor() {
-    this.isSupported = "serviceWorker" in navigator && "PushManager" in window;
+    const isAndroidUA = /Android/i.test(navigator.userAgent);
+    const hasSW = "serviceWorker" in navigator;
+    const hasPushMgr = "PushManager" in window;
+    const hasNativeBridge = !!(
+      window.ReactNativeWebView || window.OneSignal || window.Median
+    );
+    // Consider Android wrapper if Android UA and (no SW or no PushManager) or native bridge present
+    this.isAndroidApp = isAndroidUA && (!hasSW || !hasPushMgr || hasNativeBridge);
+    this.isSupported = hasSW && hasPushMgr && !this.isAndroidApp;
     this.firebaseApp = null;
     this.messaging = null;
     this.fcmToken = null;
@@ -31,9 +37,17 @@ class FCMNotificationManager {
 
   async init() {
     console.log("FCM NotificationManager initializing...");
-    console.log("Push notifications supported:", this.isSupported);
-    console.log("Current notification permission:", Notification.permission);
-
+    console.log("Detected Android app wrapper:", !!this.isAndroidApp);
+    console.log("Push notifications supported (web path):", this.isSupported);
+    this.initializeElements();
+    try { console.log("Current notification permission:", this.getNotificationPermission()); } catch(_) {}
+    await this.loadNotificationSettings();
+    if (this.isAndroidApp) {
+      this.showStatus("Notifications are managed by the Android app.", "success");
+      this.updateUIVisibility(true);
+      this.setupEventListeners();
+      return;
+    }
     if (!this.isSupported) {
       this.showStatus(
         "Push notifications are not supported in this browser.",
@@ -41,9 +55,6 @@ class FCMNotificationManager {
       );
       return;
     }
-
-    this.initializeElements();
-    await this.loadNotificationSettings();
     await this.initializeFirebase();
     await this.registerServiceWorker();
     this.setupEventListeners();
@@ -82,7 +93,7 @@ class FCMNotificationManager {
           this.showStatus("Push notifications are enabled.", "success");
         } else {
           // Check browser notification permission status
-          const browserPermission = Notification.permission;
+          const browserPermission = this.getNotificationPermission();
           console.log("Browser notification permission:", browserPermission);
 
           if (browserPermission === "denied") {
@@ -117,6 +128,16 @@ class FCMNotificationManager {
         throw new Error("Firebase configuration is missing");
       }
 
+      // Dynamically import Firebase SDK (only on web)
+      if (!initializeApp || !getMessaging || !getToken || !onMessage) {
+        const appMod = await import("https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js");
+        const msgMod = await import("https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging.js");
+        initializeApp = appMod.initializeApp;
+        getMessaging = msgMod.getMessaging;
+        getToken = msgMod.getToken;
+        onMessage = msgMod.onMessage;
+      }
+
       // Initialize Firebase
       this.firebaseApp = initializeApp(this.firebaseConfig);
       this.messaging = getMessaging(this.firebaseApp);
@@ -140,6 +161,7 @@ class FCMNotificationManager {
   }
 
   async registerServiceWorker() {
+    if (this.isAndroidApp) return; // Skip on Android app wrapper
     try {
       const registration = await navigator.serviceWorker.register(
         "/static/sw_fcm.js"
@@ -198,6 +220,11 @@ class FCMNotificationManager {
   async requestPermissionAndSubscribe() {
     console.log("Requesting permission and subscribing...");
     try {
+      if (this.isAndroidApp) {
+        // Android WebView: handled by native OneSignal
+        this.showStatus("Notifications controlled by the Android app.", "success");
+        return;
+      }
       // First request permission
       const permission = await Notification.requestPermission();
       console.log("Permission result:", permission);
@@ -223,10 +250,10 @@ class FCMNotificationManager {
       this.showStatus("Setting up FCM notifications...", "warning");
 
       // Check current notification permission
-      console.log("Current notification permission:", Notification.permission);
+      console.log("Current notification permission:", this.getNotificationPermission());
 
       // Request notification permission if not already granted
-      let permission = Notification.permission;
+      let permission = this.getNotificationPermission();
       if (permission === "default") {
         console.log("Requesting notification permission...");
         permission = await Notification.requestPermission();
@@ -423,7 +450,7 @@ class FCMNotificationManager {
   }
 
   updateUIVisibility(isSubscribed) {
-    const browserPermission = Notification.permission;
+    const browserPermission = this.getNotificationPermission();
 
     if (this.timeSettingDiv) {
       this.timeSettingDiv.style.display = isSubscribed ? "flex" : "none";
@@ -473,6 +500,14 @@ class FCMNotificationManager {
 
   getCSRFToken() {
     return document.querySelector("[name=csrfmiddlewaretoken]")?.value || "";
+  }
+
+  getNotificationPermission() {
+    try {
+      return (window.Notification && window.Notification.permission) || "granted";
+    } catch (_) {
+      return "granted";
+    }
   }
 }
 
