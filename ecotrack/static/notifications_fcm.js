@@ -1,13 +1,11 @@
 // Firebase Cloud Messaging (FCM) JavaScript
 // Handles Firebase SDK initialization, FCM token registration, and UI interactions
 
-// Import Firebase SDK modules
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
-import {
-  getMessaging,
-  getToken,
-  onMessage,
-} from "https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging.js";
+// Firebase SDK will be imported dynamically only when needed (not on Android)
+let initializeApp;
+let getMessaging;
+let getToken;
+let onMessage;
 
 class FCMNotificationManager {
   constructor() {
@@ -52,6 +50,7 @@ class FCMNotificationManager {
         "success"
       );
       this.updateUIVisibility(true);
+      await this.tryOneSignalSubscribe();
       this.setupEventListeners();
       return;
     }
@@ -133,6 +132,16 @@ class FCMNotificationManager {
     try {
       if (!this.firebaseConfig || !this.firebaseConfig.apiKey) {
         throw new Error("Firebase configuration is missing");
+      }
+
+      // Dynamically import Firebase SDK
+      if (!initializeApp || !getMessaging || !getToken || !onMessage) {
+        const appMod = await import("https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js");
+        const msgMod = await import("https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging.js");
+        initializeApp = appMod.initializeApp;
+        getMessaging = msgMod.getMessaging;
+        getToken = msgMod.getToken;
+        onMessage = msgMod.onMessage;
       }
 
       // Initialize Firebase
@@ -217,6 +226,10 @@ class FCMNotificationManager {
   async requestPermissionAndSubscribe() {
     console.log("Requesting permission and subscribing...");
     try {
+      if (this.isAndroidApp) {
+        await this.tryOneSignalSubscribe(true);
+        return;
+      }
       // First request permission
       const permission = await Notification.requestPermission();
       console.log("Permission result:", permission);
@@ -234,6 +247,46 @@ class FCMNotificationManager {
     } catch (error) {
       console.error("Error requesting permission:", error);
       this.showStatus("Error requesting notification permission.", "error");
+    }
+  }
+
+  async tryOneSignalSubscribe(showFeedback = false) {
+    try {
+      let playerId = null;
+      if (window.OneSignal && Array.isArray(window.OneSignal)) {
+        playerId = await new Promise((resolve) => {
+          window.OneSignal.push(function () {
+            try {
+              window.OneSignal.getUserId().then((id) => resolve(id)).catch(() => resolve(null));
+            } catch (e) {
+              resolve(null);
+            }
+          });
+        });
+      }
+      if (!playerId) {
+        if (showFeedback) this.showStatus("Waiting for app to register notifications…", "warning");
+        return;
+      }
+      const res = await fetch("/api/notifications/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": this.getCSRFToken() },
+        body: JSON.stringify({
+          provider: "onesignal",
+          oneSignalPlayerId: playerId,
+          deviceType: "android",
+          notificationTime: this.timeInput ? this.timeInput.value : "09:00",
+        }),
+      });
+      const json = await res.json();
+      if (json.status === "success") {
+        if (showFeedback) this.showStatus("Android notifications enabled via OneSignal.", "success");
+      } else if (showFeedback) {
+        this.showStatus(`Failed to enable notifications: ${json.message}`, "error");
+      }
+    } catch (e) {
+      if (showFeedback) this.showStatus("Error enabling notifications.", "error");
+      console.error("OneSignal subscribe error", e);
     }
   }
 

@@ -717,13 +717,20 @@ def get_notification_settings(request):
     try:
         try:
             push_subscription = PushSubscription.objects.get(user=request.user)
-            is_subscribed = push_subscription.is_active and push_subscription.has_valid_fcm_token()
+            provider = getattr(push_subscription, 'provider', 'webpush')
+            if provider == 'onesignal':
+                is_subscribed = push_subscription.is_active and bool(push_subscription.get_onesignal_player_id())
+            else:
+                is_subscribed = push_subscription.is_active and push_subscription.has_valid_fcm_token()
+
             return JsonResponse({
                 'status': 'success',
                 'data': {
                     'isSubscribed': is_subscribed,
+                    'provider': provider,
                     'notificationTime': push_subscription.notification_time.strftime('%H:%M'),
                     'deviceType': push_subscription.device_type,
+                    'onesignalPlayerId': getattr(push_subscription, 'onesignal_player_id', ''),
                     'firebaseConfig': {
                         'apiKey': getattr(settings, 'FIREBASE_API_KEY', ''),
                         'authDomain': getattr(settings, 'FIREBASE_AUTH_DOMAIN', ''),
@@ -740,6 +747,7 @@ def get_notification_settings(request):
                 'status': 'success',
                 'data': {
                     'isSubscribed': False,
+                    'provider': 'webpush',
                     'notificationTime': '09:00',
                     'deviceType': 'web',
                     'firebaseConfig': {
