@@ -17,6 +17,7 @@ from django.views.decorators.http import require_GET
 from django.conf import settings
 from .models import PushSubscription
 from .firebase_service import FCMService
+from .onesignal_service import OneSignalService
 
 
 
@@ -415,10 +416,16 @@ def cron_dispatch(request):
     failed_ids = []
 
     # Batch by device type/token validity, prefer multicast for efficiency
-    tokens = []
+    tokens = []  # FCM tokens
     subs_by_token = {}
+    onesignal_ids = []  # OneSignal player IDs
+    subs_by_player = {}
     for sub in qs:
-        if sub.has_valid_fcm_token():
+        # Prefer provider-specific channel
+        if sub.provider == 'onesignal' and getattr(sub, 'onesignal_player_id', None):
+            onesignal_ids.append(sub.onesignal_player_id)
+            subs_by_player[sub.onesignal_player_id] = sub
+        elif sub.has_valid_fcm_token():
             token = sub.get_fcm_token()
             tokens.append(token)
             subs_by_token[token] = sub
@@ -459,7 +466,6 @@ def cron_dispatch(request):
     body = response
 
     if tokens:
-        # Send per token to avoid environments where FCM batch (/batch) is blocked or returns 404
         for t in tokens:
             ok = FCMService.send_notification(t, title, body, data={'type': 'daily_reminder'})
             sub = subs_by_token.get(t)
@@ -470,6 +476,32 @@ def cron_dispatch(request):
                     sub.last_sent_time = current_time
                     sub.save(update_fields=['last_sent_date', 'last_sent_time', 'updated_at'])
             else:
+                failed += 1
+                if sub:
+                    failed_ids.append(sub.id)
+
+    if onesignal_ids:
+        # OneSignal bulk send
+        try:
+            success = OneSignalService.send_bulk(onesignal_ids, title, body, data={'type': 'daily_reminder'})
+            # If bulk send returns True treat all as sent; otherwise mark failed
+            if success:
+                for pid in onesignal_ids:
+                    sub = subs_by_player.get(pid)
+                    if sub:
+                        sent += 1
+                        sub.last_sent_date = today
+                        sub.last_sent_time = current_time
+                        sub.save(update_fields=['last_sent_date', 'last_sent_time', 'updated_at'])
+            else:
+                for pid in onesignal_ids:
+                    sub = subs_by_player.get(pid)
+                    failed += 1
+                    if sub:
+                        failed_ids.append(sub.id)
+        except Exception:
+            for pid in onesignal_ids:
+                sub = subs_by_player.get(pid)
                 failed += 1
                 if sub:
                     failed_ids.append(sub.id)
@@ -489,59 +521,64 @@ def cron_dispatch(request):
 @csrf_protect
 @require_http_methods(["POST"])
 def subscribe_push(request):
-    """Subscribe user for push notifications using FCM"""
+    """Subscribe user for push notifications.
+    Supports providers: fcm (web), onesignal (android)."""
     try:
         data = json.loads(request.body)
-        
+        provider = (data.get('provider') or '').lower()
         fcm_token = data.get('fcmToken')
+        onesignal_player_id = data.get('oneSignalPlayerId') or data.get('onesignalPlayerId') or data.get('playerId')
         device_type = data.get('deviceType', 'web')
-        notification_time = data.get('notificationTime', '09:00')  # Default to 9:00 AM
-        
-        if not fcm_token:
-            return JsonResponse({
-                'status': 'error',
-                'message': 'FCM token is required'
-            }, status=400)
-        
+        notification_time = data.get('notificationTime', '09:00')
+
+        if not provider:
+            # Infer provider
+            if fcm_token:
+                provider = 'fcm'
+            elif onesignal_player_id:
+                provider = 'onesignal'
+            else:
+                provider = 'fcm'  # default
+
         # Parse notification time
         try:
             time_obj = datetime.strptime(notification_time, '%H:%M').time()
         except ValueError:
             time_obj = datetime.strptime('09:00', '%H:%M').time()
-        
-        # Validate FCM token
-        if not FCMService.validate_token(fcm_token):
-            return JsonResponse({
-                'status': 'error',
-                'message': 'Invalid FCM token'
-            }, status=400)
-        
-        # Create or update push subscription
-        push_subscription, created = PushSubscription.objects.update_or_create(
+
+        if provider == 'fcm':
+            if not fcm_token:
+                return JsonResponse({'status': 'error', 'message': 'FCM token is required'}, status=400)
+            if not FCMService.validate_token(fcm_token):
+                return JsonResponse({'status': 'error', 'message': 'Invalid FCM token'}, status=400)
+        elif provider == 'onesignal':
+            if not onesignal_player_id:
+                return JsonResponse({'status': 'error', 'message': 'OneSignal player ID is required'}, status=400)
+        else:
+            return JsonResponse({'status': 'error', 'message': f'Unsupported provider: {provider}'}, status=400)
+
+        defaults = {
+            'device_type': device_type,
+            'notification_time': time_obj,
+            'is_active': True,
+            'provider': provider
+        }
+        if provider == 'fcm':
+            defaults['fcm_token'] = fcm_token
+            # Preserve any existing OneSignal ID if present
+        elif provider == 'onesignal':
+            defaults['onesignal_player_id'] = onesignal_player_id
+
+        PushSubscription.objects.update_or_create(
             user=request.user,
-            defaults={
-                'fcm_token': fcm_token,
-                'device_type': device_type,
-                'notification_time': time_obj,
-                'is_active': True
-            }
+            defaults=defaults
         )
-        
-        return JsonResponse({
-            'status': 'success',
-            'message': 'Successfully subscribed to push notifications'
-        })
-        
+
+        return JsonResponse({'status': 'success', 'message': 'Subscribed', 'provider': provider})
     except json.JSONDecodeError:
-        return JsonResponse({
-            'status': 'error',
-            'message': 'Invalid JSON data'
-        }, status=400)
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON data'}, status=400)
     except Exception as e:
-        return JsonResponse({
-            'status': 'error',
-            'message': str(e)
-        }, status=500)
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 
 @login_required
@@ -628,64 +665,61 @@ def update_notification_time(request):
 @csrf_protect
 @require_http_methods(["POST"])
 def test_notification(request):
-    """Send a test push notification to the user using FCM"""
+    """Send a test push notification (FCM or OneSignal)."""
     try:
         push_subscription = PushSubscription.objects.get(user=request.user, is_active=True)
-        
-        # Ensure we have a valid token
-        token = push_subscription.get_fcm_token()
-        if not token:
-            return JsonResponse({
-                'status': 'error',
-                'message': 'No FCM token found. Please re-enable notifications to register your device.'
-            }, status=400)
 
-        # Send FCM notification
-        success = FCMService.send_notification(
-            token=token,
-            title='EcoTrack Test Notification',
-            body='This is a test notification from EcoTrack!',
-            data={
-                'url': '/',
-                'timestamp': str(datetime.now()),
-                'type': 'test'
-            }
-        )
-        
-        if success:
-            return JsonResponse({
-                'status': 'success',
-                'message': 'Test notification sent successfully!'
-            })
+        provider = getattr(push_subscription, 'provider', 'fcm')
+        title = 'EcoTrack Test Notification'
+        body = 'This is a test notification from EcoTrack!'
+        data_payload = {'url': '/', 'timestamp': str(datetime.now()), 'type': 'test'}
+
+        if provider == 'onesignal' and getattr(push_subscription, 'onesignal_player_id', None):
+            success = OneSignalService.send_notification(
+                player_id=push_subscription.onesignal_player_id,
+                title=title,
+                body=body,
+                data=data_payload
+            )
+            if success:
+                return JsonResponse({'status': 'success', 'message': 'Test notification sent via OneSignal!'})
+            return JsonResponse({'status': 'error', 'message': 'Failed to send via OneSignal'}, status=500)
         else:
-            return JsonResponse({
-                'status': 'error',
-                'message': 'Failed to send test notification. Please check your subscription.'
-            }, status=500)
-        
+            token = push_subscription.get_fcm_token()
+            if not token:
+                return JsonResponse({'status': 'error', 'message': 'No push token found. Please re-enable notifications.'}, status=400)
+            success = FCMService.send_notification(
+                token=token,
+                title=title,
+                body=body,
+                data=data_payload
+            )
+            if success:
+                return JsonResponse({'status': 'success', 'message': 'Test notification sent successfully!'})
+            return JsonResponse({'status': 'error', 'message': 'Failed to send test notification.'}, status=500)
     except PushSubscription.DoesNotExist:
-        return JsonResponse({
-            'status': 'error',
-            'message': 'No active push subscription found. Please subscribe first.'
-        }, status=404)
+        return JsonResponse({'status': 'error', 'message': 'No active push subscription found. Please subscribe first.'}, status=404)
     except Exception as e:
-        return JsonResponse({
-            'status': 'error',
-            'message': str(e)
-        }, status=500)
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 
 @login_required
 def get_notification_settings(request):
-    """Get user's current notification settings"""
+    """Get user's current notification settings (supports FCM & OneSignal)."""
     try:
         try:
             push_subscription = PushSubscription.objects.get(user=request.user)
-            is_subscribed = push_subscription.is_active and push_subscription.has_valid_fcm_token()
+            has_fcm = push_subscription.has_valid_fcm_token()
+            has_onesignal = getattr(push_subscription, 'onesignal_player_id', None) is not None
+            is_subscribed = push_subscription.is_active and (has_fcm or has_onesignal)
+            provider = getattr(push_subscription, 'provider', 'fcm')
             return JsonResponse({
                 'status': 'success',
                 'data': {
                     'isSubscribed': is_subscribed,
+                    'provider': provider,
+                    'hasFCM': has_fcm,
+                    'hasOneSignal': has_onesignal,
                     'notificationTime': push_subscription.notification_time.strftime('%H:%M'),
                     'deviceType': push_subscription.device_type,
                     'firebaseConfig': {
@@ -704,6 +738,9 @@ def get_notification_settings(request):
                 'status': 'success',
                 'data': {
                     'isSubscribed': False,
+                    'provider': None,
+                    'hasFCM': False,
+                    'hasOneSignal': False,
                     'notificationTime': '09:00',
                     'deviceType': 'web',
                     'firebaseConfig': {
@@ -717,12 +754,8 @@ def get_notification_settings(request):
                     }
                 }
             })
-            
     except Exception as e:
-        return JsonResponse({
-            'status': 'error',
-            'message': str(e)
-        }, status=500)
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 
 # Community Views

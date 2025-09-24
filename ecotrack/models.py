@@ -41,18 +41,22 @@ class User(AbstractUser):
 
 class PushSubscription(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='push_subscription')
-    endpoint = models.TextField()
-    p256dh_key = models.TextField()  
-    auth_key = models.TextField()
-    # FCM token for Firebase Cloud Messaging
+    # Web Push (optional now for Android native)
+    endpoint = models.TextField(blank=True, null=True)
+    p256dh_key = models.TextField(blank=True, null=True)
+    auth_key = models.TextField(blank=True, null=True)
+    # FCM token for Firebase Cloud Messaging (web or fallback)
     fcm_token = models.TextField(blank=True, null=True)
-    # Device/platform information for better targeting
-    device_type = models.CharField(max_length=50, default='web', blank=True, null=True)  # 'web', 'android', 'ios'
-    notification_time = models.TimeField(default=datetime.strptime('09:00', '%H:%M').time())  # Default to 9:00 AM
+    # OneSignal player id for Android app wrapper
+    onesignal_player_id = models.TextField(blank=True, null=True)
+    # Provider: webpush | fcm | onesignal
+    provider = models.CharField(max_length=20, default='webpush')
+    # Device/platform information for better targeting: 'web', 'android', 'ios'
+    device_type = models.CharField(max_length=50, default='web', blank=True, null=True)
+    notification_time = models.TimeField(default=datetime.strptime('09:00', '%H:%M').time())
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    # De-duplication tracking to avoid multiple sends in the same day for the same scheduled time
     last_sent_date = models.DateField(null=True, blank=True)
     last_sent_time = models.TimeField(null=True, blank=True)
     
@@ -70,13 +74,17 @@ class PushSubscription(models.Model):
         }
     
     def get_fcm_token(self):
-        """Return FCM token for Firebase messaging"""
         return self.fcm_token or ''
+
+    def get_onesignal_player_id(self):
+        return (self.onesignal_player_id or '').strip()
     
     def has_valid_fcm_token(self):
-        """Check if subscription has a valid FCM token"""
         token = self.get_fcm_token()
         return bool(token and token.strip())
+
+    def has_valid_onesignal(self):
+        return bool(self.get_onesignal_player_id())
 
 
 class Community(models.Model):
