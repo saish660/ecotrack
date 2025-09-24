@@ -9,14 +9,20 @@ let onMessage;
 
 class FCMNotificationManager {
   constructor() {
-    const isAndroidUA = /Android/i.test(navigator.userAgent);
+    const ua = navigator.userAgent || "";
+    const uaLower = ua.toLowerCase();
+    const isAndroidUA = /android/i.test(ua);
     const hasSW = "serviceWorker" in navigator;
     const hasPushMgr = "PushManager" in window;
-    const hasNativeBridge = !!(
-      window.ReactNativeWebView || window.OneSignal || window.Median
-    );
-    // Consider Android wrapper if Android UA and (no SW or no PushManager) or native bridge present
-    this.isAndroidApp = isAndroidUA && (!hasSW || !hasPushMgr || hasNativeBridge);
+    const hasNativeBridge = !!(window.median || window.Median || window.ReactNativeWebView);
+    const hasMedianUA = uaLower.includes("median") || uaLower.includes("gonative");
+    const isWebView = uaLower.includes(" wv") || uaLower.includes("; wv"); // heuristic for Android WebView
+    // Treat as Android native wrapper if:
+    //  - Median/GoNative signature in UA OR
+    //  - native bridge object present OR
+    //  - Android WebView indicators AND we plan native notifications
+    this.isAndroidApp = isAndroidUA && (hasMedianUA || hasNativeBridge || isWebView);
+    // Only allow full FCM web path when NOT Android wrapper and capabilities exist
     this.isSupported = hasSW && hasPushMgr && !this.isAndroidApp;
     this.firebaseApp = null;
     this.messaging = null;
@@ -43,9 +49,12 @@ class FCMNotificationManager {
     try { console.log("Current notification permission:", this.getNotificationPermission()); } catch(_) {}
     await this.loadNotificationSettings();
     if (this.isAndroidApp) {
-      this.showStatus("Notifications are managed by the Android app.", "success");
-      this.updateUIVisibility(true);
+      // Defer to native (OneSignal) path – skip FCM entirely
+      this.showStatus("Android app detected: using native notification channel.", "success");
+      this.updateUIVisibility(false); // Start disabled until playerId arrives
       this.setupEventListeners();
+      // Begin polling for OneSignal player id if web SDK injected later
+      this.pollForNativeRegistration();
       return;
     }
     if (!this.isSupported) {
@@ -252,6 +261,12 @@ class FCMNotificationManager {
 
   async subscribeToNotifications() {
     try {
+      if (this.isAndroidApp) {
+        // Safety guard: do not attempt FCM inside Median wrapper
+        this.showStatus("Native Android environment detected — FCM web flow skipped.", "warning");
+        await this.tryOneSignalSubscribe(true);
+        return;
+      }
       this.showStatus("Setting up FCM notifications...", "warning");
 
       // Check current notification permission
@@ -584,6 +599,26 @@ class FCMNotificationManager {
       console.error("OneSignal subscribe error", e);
     }
   }
+
+  pollForNativeRegistration() {
+    // Poll for up to 10s (every 1s) for native -> web registration (either OneSignal SDK or bridge call)
+    let attempts = 0;
+    const max = 10;
+    const interval = setInterval(async () => {
+      attempts++;
+      if (this.toggle && this.toggle.checked) {
+        clearInterval(interval);
+        return; // Already subscribed
+      }
+      // Attempt OneSignal subscribe silently
+      await this.tryOneSignalSubscribe(false);
+      if (this.toggle && this.toggle.checked) {
+        clearInterval(interval);
+        return;
+      }
+      if (attempts >= max) clearInterval(interval);
+    }, 1000);
+  }
 }
 
 // Initialize the notification manager when the DOM is loaded
@@ -672,6 +707,23 @@ window.registerOneSignalPlayerId = async function (playerId, notificationTime) {
     console.error("registerOneSignalPlayerId error", e);
     return { status: "error", message: e?.message || "Unknown error" };
   }
+};
+
+// Debug helper: expose environment detection
+window.__notificationEnvDebug = function(){
+  const mgr = window.notificationManager;
+  if(!mgr){ return { ready:false }; }
+  return {
+    isAndroidApp: mgr.isAndroidApp,
+    isSupported: mgr.isSupported,
+    ua: navigator.userAgent,
+    hasSW: 'serviceWorker' in navigator,
+    hasPushMgr: 'PushManager' in window,
+    medianObj: !!(window.median || window.Median),
+    oneSignalArray: !!window.OneSignal,
+    fcmInitialized: !!mgr.messaging,
+    fcmToken: mgr.fcmToken
+  };
 };
 
 // Add Median bridge integration for Android native wrapper
