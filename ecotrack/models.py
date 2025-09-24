@@ -1,11 +1,17 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from datetime import datetime, timedelta
+from django.utils import timezone
 import json
 
 
 def get_default_dict():
     return {}
+
+
+def default_last_checkin():
+    """Return a stable relative default (yesterday) without freezing a timestamp in migrations."""
+    return timezone.now().date() - timedelta(days=1)
 
 
 class User(AbstractUser):
@@ -17,7 +23,8 @@ class User(AbstractUser):
     user_data = models.JSONField(default=get_default_dict, blank=True)
     survey_answered = models.BooleanField(default=False)
     achievements = models.JSONField(default=list, blank=True)
-    last_checkin = models.DateField(null=True, blank=True, default=datetime.now() - timedelta(days=1))
+    # Use callable default to avoid generating a new migration each time makemigrations runs.
+    last_checkin = models.DateField(null=True, blank=True, default=default_last_checkin)
     habits_today = models.PositiveIntegerField(default=0)
     last_8_footprint_measurements = models.JSONField(default=list, blank=True)
 
