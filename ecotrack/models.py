@@ -1,17 +1,11 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from datetime import datetime, timedelta
-from django.utils import timezone
 import json
 
 
 def get_default_dict():
     return {}
-
-
-def default_last_checkin():
-    """Return a stable relative default (yesterday) without freezing a timestamp in migrations."""
-    return timezone.now().date() - timedelta(days=1)
 
 
 class User(AbstractUser):
@@ -23,8 +17,7 @@ class User(AbstractUser):
     user_data = models.JSONField(default=get_default_dict, blank=True)
     survey_answered = models.BooleanField(default=False)
     achievements = models.JSONField(default=list, blank=True)
-    # Use callable default to avoid generating a new migration each time makemigrations runs.
-    last_checkin = models.DateField(null=True, blank=True, default=default_last_checkin)
+    last_checkin = models.DateField(null=True, blank=True, default=datetime.now() - timedelta(days=1))
     habits_today = models.PositiveIntegerField(default=0)
     last_8_footprint_measurements = models.JSONField(default=list, blank=True)
 
@@ -48,22 +41,23 @@ class User(AbstractUser):
 
 class PushSubscription(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='push_subscription')
-    # Web Push (optional now for Android native)
+    # Web Push (VAPID) fields — optional so native (Android/iOS) can register without them
     endpoint = models.TextField(blank=True, null=True)
-    p256dh_key = models.TextField(blank=True, null=True)
+    p256dh_key = models.TextField(blank=True, null=True)  
     auth_key = models.TextField(blank=True, null=True)
-    # FCM token for Firebase Cloud Messaging (web or fallback)
+    # FCM token for Firebase Cloud Messaging
     fcm_token = models.TextField(blank=True, null=True)
-    # OneSignal player id for Android app wrapper
+    # OneSignal player/device id (for native mobile integration via Median)
     onesignal_player_id = models.TextField(blank=True, null=True)
-    # Provider: webpush | fcm | onesignal
-    provider = models.CharField(max_length=20, default='webpush')
-    # Device/platform information for better targeting: 'web', 'android', 'ios'
-    device_type = models.CharField(max_length=50, default='web', blank=True, null=True)
-    notification_time = models.TimeField(default=datetime.strptime('09:00', '%H:%M').time())
+    # Active push provider: 'fcm' (web/native direct) or 'onesignal'
+    push_provider = models.CharField(max_length=20, default='fcm')
+    # Device/platform information for better targeting
+    device_type = models.CharField(max_length=50, default='web', blank=True, null=True)  # 'web', 'android', 'ios'
+    notification_time = models.TimeField(default=datetime.strptime('09:00', '%H:%M').time())  # Default to 9:00 AM
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    # De-duplication tracking to avoid multiple sends in the same day for the same scheduled time
     last_sent_date = models.DateField(null=True, blank=True)
     last_sent_time = models.TimeField(null=True, blank=True)
     
@@ -81,17 +75,20 @@ class PushSubscription(models.Model):
         }
     
     def get_fcm_token(self):
+        """Return FCM token for Firebase messaging"""
         return self.fcm_token or ''
-
-    def get_onesignal_player_id(self):
-        return (self.onesignal_player_id or '').strip()
     
     def has_valid_fcm_token(self):
+        """Check if subscription has a valid FCM token"""
         token = self.get_fcm_token()
         return bool(token and token.strip())
 
-    def has_valid_onesignal(self):
-        return bool(self.get_onesignal_player_id())
+    def get_onesignal_player_id(self):
+        return self.onesignal_player_id or ''
+
+    def has_onesignal_player_id(self):
+        pid = self.get_onesignal_player_id()
+        return bool(pid and pid.strip())
 
 
 class Community(models.Model):

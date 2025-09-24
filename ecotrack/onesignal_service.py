@@ -1,3 +1,46 @@
+"""OneSignal service helper for sending push notifications via OneSignal REST API."""
+import logging
+import requests
+from django.conf import settings
+
+logger = logging.getLogger(__name__)
+
+
+class OneSignalService:
+    BASE_URL = "https://api.onesignal.com/notifications"
+
+    @classmethod
+    def is_configured(cls) -> bool:
+        return bool(getattr(settings, 'ONESIGNAL_APP_ID', None) and getattr(settings, 'ONESIGNAL_REST_API_KEY', None))
+
+    @classmethod
+    def send_notification(cls, player_ids, title: str, body: str, data: dict | None = None) -> bool:
+        if not cls.is_configured():
+            logger.error("OneSignal not configured: missing ONESIGNAL_APP_ID or ONESIGNAL_REST_API_KEY")
+            return False
+        if not player_ids:
+            return False
+        payload = {
+            "app_id": getattr(settings, 'ONESIGNAL_APP_ID'),
+            "include_player_ids": player_ids,
+            "headings": {"en": title},
+            "contents": {"en": body},
+            "data": data or {},
+        }
+        headers = {
+            "Authorization": f"Basic {getattr(settings, 'ONESIGNAL_REST_API_KEY')}",
+            "Content-Type": "application/json",
+        }
+        try:
+            resp = requests.post(cls.BASE_URL, json=payload, headers=headers, timeout=10)
+            if resp.status_code >= 200 and resp.status_code < 300:
+                logger.info("OneSignal notification sent: %s", resp.text[:200])
+                return True
+            logger.error("OneSignal send failed (%s): %s", resp.status_code, resp.text[:300])
+            return False
+        except Exception as e:
+            logger.exception("OneSignal send exception: %s", e)
+            return False
 """
 OneSignal push notification service.
 Sends notifications to Android devices (Median-wrapped app) using OneSignal REST API.

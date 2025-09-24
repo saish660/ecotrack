@@ -2,8 +2,6 @@
 
 import ecotrack.models
 from django.db import migrations, models
-from django.utils import timezone
-from datetime import timedelta
 
 
 class Migration(migrations.Migration):
@@ -12,16 +10,10 @@ class Migration(migrations.Migration):
         ('ecotrack', '0028_alter_user_last_checkin'),
     ]
 
-    def set_last_checkin(apps, schema_editor):
-        User = apps.get_model('ecotrack', 'User')
-        yesterday = timezone.now().date() - timedelta(days=1)
-        User.objects.filter(last_checkin__isnull=True).update(last_checkin=yesterday)
-
     operations = [
         migrations.AlterField(
             model_name='user',
             name='last_checkin',
             field=models.DateField(blank=True, default=ecotrack.models.default_last_checkin, null=True),
         ),
-        migrations.RunPython(set_last_checkin, migrations.RunPython.noop),
     ]
