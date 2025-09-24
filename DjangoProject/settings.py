@@ -156,3 +156,7 @@ VAPID_CLAIMS_EMAIL = "mailto:admin@ecotrack.com"
 # Cron dispatch security token (used by external schedulers like cron-job.org)
 # Set environment variable CRON_SECRET to a strong random value in production.
 CRON_SECRET = os.getenv('CRON_SECRET', '')
+
+# OneSignal Configuration
+ONESIGNAL_APP_ID = os.getenv('ONESIGNAL_APP_ID', '')
+ONESIGNAL_REST_API_KEY = os.getenv('ONESIGNAL_REST_API_KEY', '')

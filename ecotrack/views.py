@@ -17,6 +17,7 @@ from django.views.decorators.http import require_GET
 from django.conf import settings
 from .models import PushSubscription
 from .firebase_service import FCMService
+from .onesignal_service import OneSignalService
 
 
 
@@ -489,18 +490,21 @@ def cron_dispatch(request):
 @csrf_protect
 @require_http_methods(["POST"])
 def subscribe_push(request):
-    """Subscribe user for push notifications using FCM"""
+    """Subscribe user for push notifications using FCM or OneSignal"""
     try:
         data = json.loads(request.body)
         
         fcm_token = data.get('fcmToken')
+        onesignal_player_id = data.get('oneSignalPlayerId')
         device_type = data.get('deviceType', 'web')
         notification_time = data.get('notificationTime', '09:00')  # Default to 9:00 AM
+        provider = data.get('provider', 'fcm')  # Default to FCM
         
-        if not fcm_token:
+        # Validate that we have at least one token/ID
+        if not fcm_token and not onesignal_player_id:
             return JsonResponse({
                 'status': 'error',
-                'message': 'FCM token is required'
+                'message': 'Either FCM token or OneSignal player ID is required'
             }, status=400)
         
         # Parse notification time
@@ -509,22 +513,37 @@ def subscribe_push(request):
         except ValueError:
             time_obj = datetime.strptime('09:00', '%H:%M').time()
         
-        # Validate FCM token
-        if not FCMService.validate_token(fcm_token):
-            return JsonResponse({
-                'status': 'error',
-                'message': 'Invalid FCM token'
-            }, status=400)
+        # Validate tokens based on provider
+        if provider == 'fcm' and fcm_token:
+            if not FCMService.validate_token(fcm_token):
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Invalid FCM token'
+                }, status=400)
+        elif provider == 'onesignal' and onesignal_player_id:
+            # OneSignal player IDs are UUIDs, basic validation
+            if not onesignal_player_id or len(onesignal_player_id) < 10:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Invalid OneSignal player ID'
+                }, status=400)
         
         # Create or update push subscription
+        defaults = {
+            'device_type': device_type,
+            'notification_time': time_obj,
+            'is_active': True,
+            'provider': provider
+        }
+        
+        if fcm_token:
+            defaults['fcm_token'] = fcm_token
+        if onesignal_player_id:
+            defaults['onesignal_player_id'] = onesignal_player_id
+        
         push_subscription, created = PushSubscription.objects.update_or_create(
             user=request.user,
-            defaults={
-                'fcm_token': fcm_token,
-                'device_type': device_type,
-                'notification_time': time_obj,
-                'is_active': True
-            }
+            defaults=defaults
         )
         
         return JsonResponse({
@@ -628,29 +647,50 @@ def update_notification_time(request):
 @csrf_protect
 @require_http_methods(["POST"])
 def test_notification(request):
-    """Send a test push notification to the user using FCM"""
+    """Send a test push notification to the user using FCM or OneSignal"""
     try:
         push_subscription = PushSubscription.objects.get(user=request.user, is_active=True)
         
-        # Ensure we have a valid token
-        token = push_subscription.get_fcm_token()
-        if not token:
-            return JsonResponse({
-                'status': 'error',
-                'message': 'No FCM token found. Please re-enable notifications to register your device.'
-            }, status=400)
+        provider = getattr(push_subscription, 'provider', 'fcm')
+        
+        if provider == 'onesignal':
+            # Send OneSignal notification
+            player_id = push_subscription.get_onesignal_player_id()
+            if not player_id:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'No OneSignal player ID found. Please re-enable notifications.'
+                }, status=400)
+            
+            success = OneSignalService.send_notification(
+                player_id=player_id,
+                title='EcoTrack Test Notification',
+                body='This is a test notification from EcoTrack!',
+                data={
+                    'url': '/',
+                    'timestamp': str(datetime.now()),
+                    'type': 'test'
+                }
+            )
+        else:
+            # Send FCM notification (default)
+            token = push_subscription.get_fcm_token()
+            if not token:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'No FCM token found. Please re-enable notifications to register your device.'
+                }, status=400)
 
-        # Send FCM notification
-        success = FCMService.send_notification(
-            token=token,
-            title='EcoTrack Test Notification',
-            body='This is a test notification from EcoTrack!',
-            data={
-                'url': '/',
-                'timestamp': str(datetime.now()),
-                'type': 'test'
-            }
-        )
+            success = FCMService.send_notification(
+                token=token,
+                title='EcoTrack Test Notification',
+                body='This is a test notification from EcoTrack!',
+                data={
+                    'url': '/',
+                    'timestamp': str(datetime.now()),
+                    'type': 'test'
+                }
+            )
         
         if success:
             return JsonResponse({
@@ -681,13 +721,19 @@ def get_notification_settings(request):
     try:
         try:
             push_subscription = PushSubscription.objects.get(user=request.user)
-            is_subscribed = push_subscription.is_active and push_subscription.has_valid_fcm_token()
+            # Check subscription status based on provider
+            provider = getattr(push_subscription, 'provider', 'fcm')
+            if provider == 'onesignal':
+                is_subscribed = push_subscription.is_active and push_subscription.has_valid_onesignal_player_id()
+            else:
+                is_subscribed = push_subscription.is_active and push_subscription.has_valid_fcm_token()
             return JsonResponse({
                 'status': 'success',
                 'data': {
                     'isSubscribed': is_subscribed,
                     'notificationTime': push_subscription.notification_time.strftime('%H:%M'),
                     'deviceType': push_subscription.device_type,
+                    'provider': getattr(push_subscription, 'provider', 'fcm'),
                     'firebaseConfig': {
                         'apiKey': getattr(settings, 'FIREBASE_API_KEY', ''),
                         'authDomain': getattr(settings, 'FIREBASE_AUTH_DOMAIN', ''),
@@ -696,6 +742,9 @@ def get_notification_settings(request):
                         'messagingSenderId': getattr(settings, 'FIREBASE_MESSAGING_SENDER_ID', ''),
                         'appId': getattr(settings, 'FIREBASE_APP_ID', ''),
                         'vapidKey': getattr(settings, 'FIREBASE_VAPID_KEY', '')
+                    },
+                    'oneSignalConfig': {
+                        'appId': getattr(settings, 'ONESIGNAL_APP_ID', '')
                     }
                 }
             })
@@ -706,6 +755,7 @@ def get_notification_settings(request):
                     'isSubscribed': False,
                     'notificationTime': '09:00',
                     'deviceType': 'web',
+                    'provider': 'fcm',
                     'firebaseConfig': {
                         'apiKey': getattr(settings, 'FIREBASE_API_KEY', ''),
                         'authDomain': getattr(settings, 'FIREBASE_AUTH_DOMAIN', ''),
@@ -714,6 +764,9 @@ def get_notification_settings(request):
                         'messagingSenderId': getattr(settings, 'FIREBASE_MESSAGING_SENDER_ID', ''),
                         'appId': getattr(settings, 'FIREBASE_APP_ID', ''),
                         'vapidKey': getattr(settings, 'FIREBASE_VAPID_KEY', '')
+                    },
+                    'oneSignalConfig': {
+                        'appId': getattr(settings, 'ONESIGNAL_APP_ID', '')
                     }
                 }
             })

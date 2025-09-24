@@ -41,13 +41,21 @@ class User(AbstractUser):
 
 class PushSubscription(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='push_subscription')
-    endpoint = models.TextField()
-    p256dh_key = models.TextField()  
-    auth_key = models.TextField()
+    endpoint = models.TextField(blank=True, null=True)
+    p256dh_key = models.TextField(blank=True, null=True)  
+    auth_key = models.TextField(blank=True, null=True)
     # FCM token for Firebase Cloud Messaging
     fcm_token = models.TextField(blank=True, null=True)
+    # OneSignal player ID for Median apps
+    onesignal_player_id = models.TextField(blank=True, null=True)
     # Device/platform information for better targeting
-    device_type = models.CharField(max_length=50, default='web', blank=True, null=True)  # 'web', 'android', 'ios'
+    device_type = models.CharField(max_length=50, default='web', blank=True, null=True)  # 'web', 'android', 'ios', 'median'
+    # Notification provider type
+    provider = models.CharField(max_length=20, choices=[
+        ('fcm', 'Firebase Cloud Messaging'),
+        ('onesignal', 'OneSignal'),
+        ('web_push', 'Web Push API')
+    ], default='fcm')
     notification_time = models.TimeField(default=datetime.strptime('09:00', '%H:%M').time())  # Default to 9:00 AM
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -62,10 +70,10 @@ class PushSubscription(models.Model):
     def get_subscription_info(self):
         """Return subscription info in the format expected by pywebpush"""
         return {
-            'endpoint': self.endpoint,
+            'endpoint': self.endpoint or '',
             'keys': {
-                'p256dh': self.p256dh_key,
-                'auth': self.auth_key
+                'p256dh': self.p256dh_key or '',
+                'auth': self.auth_key or ''
             }
         }
     
@@ -77,6 +85,26 @@ class PushSubscription(models.Model):
         """Check if subscription has a valid FCM token"""
         token = self.get_fcm_token()
         return bool(token and token.strip())
+    
+    def get_onesignal_player_id(self):
+        """Return OneSignal player ID for Median apps"""
+        return self.onesignal_player_id or ''
+    
+    def has_valid_onesignal_player_id(self):
+        """Check if subscription has a valid OneSignal player ID"""
+        player_id = self.get_onesignal_player_id()
+        return bool(player_id and player_id.strip())
+    
+    def has_valid_push_credentials(self):
+        """Check if subscription has valid push credentials for any provider"""
+        provider = getattr(self, 'provider', 'fcm')
+        if provider == 'fcm':
+            return self.has_valid_fcm_token()
+        elif provider == 'onesignal':
+            return self.has_valid_onesignal_player_id()
+        elif provider == 'web_push':
+            return bool(self.endpoint and self.p256dh_key and self.auth_key)
+        return False
 
 
 class Community(models.Model):

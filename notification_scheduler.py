@@ -24,13 +24,27 @@ from django.core.management import call_command
 
 
 def send_notifications():
-    """Send daily notifications using Django management command"""
+    """Send daily notifications using Django management commands"""
     try:
         print(f"{datetime.now()} - Running daily notifications...")
-        call_command('send_daily_notifications')
-        print(f"{datetime.now()} - Daily notifications completed")
+        
+        # Send FCM notifications (web and legacy)
+        try:
+            call_command('send_daily_notifications')
+            print(f"{datetime.now()} - FCM notifications completed")
+        except Exception as e:
+            print(f"{datetime.now()} - Error running FCM notifications: {e}")
+        
+        # Send OneSignal notifications (Median apps)
+        try:
+            call_command('send_onesignal_notifications')
+            print(f"{datetime.now()} - OneSignal notifications completed")
+        except Exception as e:
+            print(f"{datetime.now()} - Error running OneSignal notifications: {e}")
+            
+        print(f"{datetime.now()} - All daily notifications completed")
     except Exception as e:
-        print(f"{datetime.now()} - Error running notifications: {e}")
+        print(f"{datetime.now()} - Error in notification scheduler: {e}")
 
 
 def main():
