@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, Community, CommunityMembership, CommunityMessage, CommunityTask, TaskParticipation
+from .models import User, Community, CommunityMembership, CommunityMessage, CommunityTask, TaskParticipation, PushSubscription
 
 
 @admin.register(Community)
@@ -49,3 +49,18 @@ class TaskParticipationAdmin(admin.ModelAdmin):
 
 # Register your models here.
 admin.site.register(User)
+
+@admin.register(PushSubscription)
+class PushSubscriptionAdmin(admin.ModelAdmin):
+    list_display = ['user', 'provider', 'device_type', 'has_fcm', 'has_onesignal', 'notification_time', 'is_active', 'last_sent_date', 'last_sent_time']
+    list_filter = ['provider', 'device_type', 'is_active', 'notification_time']
+    search_fields = ['user__username', 'fcm_token', 'onesignal_player_id']
+    readonly_fields = ['created_at', 'updated_at']
+
+    def has_fcm(self, obj):
+        return bool(obj.fcm_token)
+    has_fcm.boolean = True
+
+    def has_onesignal(self, obj):
+        return bool(obj.onesignal_player_id)
+    has_onesignal.boolean = True
