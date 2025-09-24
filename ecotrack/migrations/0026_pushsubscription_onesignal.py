@@ -1,19 +1,14 @@
 from django.db import migrations, models
 
 class Migration(migrations.Migration):
+    """
+    This migration originally added onesignal_player_id and push_provider.
+    They already exist in the current database (perhaps manually added or from a prior attempt),
+    so we convert this migration into a no-op to avoid duplicate column errors.
+    """
+
     dependencies = [
         ('ecotrack', '0025_alter_pushsubscription_web_fields'),
     ]
 
-    operations = [
-        migrations.AddField(
-            model_name='pushsubscription',
-            name='onesignal_player_id',
-            field=models.TextField(blank=True, null=True),
-        ),
-        migrations.AddField(
-            model_name='pushsubscription',
-            name='push_provider',
-            field=models.CharField(default='fcm', max_length=20),
-        ),
-    ]
+    operations = []

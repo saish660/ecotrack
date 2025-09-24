@@ -7,6 +7,13 @@ import json
 def get_default_dict():
     return {}
 
+# Historical migration compatibility: older migrations reference
+# ecotrack.models.default_last_checkin. Reintroduce it so those migrations load.
+def default_last_checkin():
+    from datetime import datetime, timedelta
+    # Return a date object representing "yesterday" so streak logic works.
+    return (datetime.now() - timedelta(days=1)).date()
+
 
 class User(AbstractUser):
     days_since_last_survey = models.PositiveIntegerField(default=0)
@@ -50,7 +57,8 @@ class PushSubscription(models.Model):
     # OneSignal player/device id (for native mobile integration via Median)
     onesignal_player_id = models.TextField(blank=True, null=True)
     # Active push provider: 'fcm' (web/native direct) or 'onesignal'
-    push_provider = models.CharField(max_length=20, default='fcm')
+    # Stored in existing DB column 'provider' (migration state fix)
+    push_provider = models.CharField(max_length=20, default='fcm', db_column='provider')
     # Device/platform information for better targeting
     device_type = models.CharField(max_length=50, default='web', blank=True, null=True)  # 'web', 'android', 'ios'
     notification_time = models.TimeField(default=datetime.strptime('09:00', '%H:%M').time())  # Default to 9:00 AM
