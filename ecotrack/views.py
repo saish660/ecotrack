@@ -588,8 +588,16 @@ def unsubscribe_push(request):
     """Unsubscribe user from push notifications"""
     try:
         push_subscription = PushSubscription.objects.get(user=request.user)
+        # Clear tokens based on provider to ensure fresh re-subscription later
+        if push_subscription.provider == 'onesignal':
+            push_subscription.onesignal_player_id = None
+        elif push_subscription.provider == 'fcm':
+            push_subscription.fcm_token = None
+        # Keep provider field (could be reused) but mark inactive
         push_subscription.is_active = False
-        push_subscription.save()
+        push_subscription.save(update_fields=[
+            'onesignal_player_id', 'fcm_token', 'is_active', 'updated_at'
+        ])
         
         return JsonResponse({
             'status': 'success',

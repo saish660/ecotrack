@@ -673,3 +673,34 @@ window.registerOneSignalPlayerId = async function (playerId, notificationTime) {
     return { status: "error", message: e?.message || "Unknown error" };
   }
 };
+
+// Add Median bridge integration for Android native wrapper
+function median_library_ready(){
+  // Attempt to request OneSignal player id via Median native datastore or custom bridge if exposed
+  if(window.notificationManager && window.notificationManager.isAndroidApp){
+    // If the native layer injects a method to get player id, call it
+    try{
+      if(window.median && window.median.onesignal && typeof window.median.onesignal.getPlayerId === 'function'){
+        window.median.onesignal.getPlayerId().then(function(pid){
+          if(pid){
+            window.registerOneSignalPlayerId(pid);
+          }
+        }).catch(()=>{});
+      }
+    }catch(e){console.debug('Median bridge player id retrieval failed', e);}
+    // Also attempt a passive subscription attempt (in case OneSignal web SDK is present later)
+    setTimeout(()=>{
+      if(window.notificationManager && (!window.notificationManager.toggle || window.notificationManager.toggle.checked === false)){
+        window.notificationManager.tryOneSignalSubscribe(false);
+      }
+    }, 1500);
+  }
+}
+
+// Ensure the function fires if library already loaded early
+if(window.median){
+  try { window.median_library_ready(); } catch(_) {}
+}
+
+// Expose globally for frameworks
+window.median_library_ready = median_library_ready;
