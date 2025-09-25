@@ -18,11 +18,13 @@
     };
   }
 
-  function loadScript(src) {
+  function loadScript(src, isModule = true) {
     return new Promise((resolve, reject) => {
       const script = document.createElement("script");
       script.src = src;
-      script.type = "module";
+      if (isModule) {
+        script.type = "module";
+      }
       script.onload = resolve;
       script.onerror = reject;
       document.head.appendChild(script);
@@ -35,11 +37,11 @@
 
     try {
       if (platform.isMedian) {
-        console.log("Loading Median OneSignal notification system...");
-        await loadScript("/static/notifications_median.js");
+        console.log("Loading Median OneSignal notification system (non-module)...");
+        await loadScript("/static/notifications_median.js", false);
       } else {
-        console.log("Loading web FCM notification system...");
-        await loadScript("/static/notifications_fcm.js");
+        console.log("Loading web FCM notification system (ES module)...");
+        await loadScript("/static/notifications_fcm.js", true);
       }
     } catch (error) {
       console.error("Failed to load notification system:", error);

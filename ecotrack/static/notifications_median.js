@@ -5,6 +5,7 @@ class MedianNotificationManager {
   constructor() {
     this.isMedianApp = this.detectMedianApp();
     this.oneSignalPlayerId = null;
+    this.alwaysShowControls = true;
 
     // UI elements
     this.toggle = null;
@@ -54,6 +55,12 @@ class MedianNotificationManager {
     this.statusDiv = document.getElementById("notification-status");
     this.timeSettingDiv = document.getElementById("time-setting");
     this.permissionBtn = document.getElementById("request-permission-btn");
+    // Force controls visible immediately
+    if (this.timeSettingDiv) this.timeSettingDiv.style.display = "block";
+    if (this.testBtn) this.testBtn.style.display = "inline-block";
+    if (this.saveBtn) this.saveBtn.style.display = "inline-block";
+    if (this.permissionBtn) this.permissionBtn.style.display = "inline-block";
+    this.showStatus("Loading notification settings... (you can still interact)", "info");
   }
 
   async setupMedianIntegration() {
@@ -381,13 +388,14 @@ class MedianNotificationManager {
   }
 
   updateUIVisibility(isSubscribed) {
-    if (this.timeSettingDiv) {
-      this.timeSettingDiv.style.display = isSubscribed ? "block" : "none";
+    if (this.alwaysShowControls) {
+      if (this.timeSettingDiv) this.timeSettingDiv.style.display = "block";
+      if (this.testBtn) this.testBtn.style.display = "inline-block";
+      if (this.saveBtn) this.saveBtn.style.display = "inline-block";
+      return;
     }
-
-    if (this.testBtn) {
-      this.testBtn.style.display = isSubscribed ? "inline-block" : "none";
-    }
+    if (this.timeSettingDiv) this.timeSettingDiv.style.display = isSubscribed ? "block" : "none";
+    if (this.testBtn) this.testBtn.style.display = isSubscribed ? "inline-block" : "none";
   }
 
   getCSRFToken() {

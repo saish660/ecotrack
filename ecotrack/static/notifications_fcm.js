@@ -22,6 +22,7 @@ class FCMNotificationManager {
     this.messaging = null;
     this.fcmToken = null;
     this.firebaseConfig = null;
+    this.alwaysShowControls = true;
 
     // UI elements
     this.toggle = null;
@@ -75,6 +76,11 @@ class FCMNotificationManager {
     this.statusDiv = document.getElementById("notification-status");
     this.timeSettingDiv = document.getElementById("time-setting");
     this.permissionBtn = document.getElementById("request-permission-btn");
+    if (this.timeSettingDiv) this.timeSettingDiv.style.display = "flex";
+    if (this.testBtn) this.testBtn.style.display = "block";
+    if (this.saveBtn) this.saveBtn.style.display = "block";
+    if (this.permissionBtn) this.permissionBtn.style.display = "block";
+    this.showStatus("Loading notification settings... (you can still interact)", "info");
   }
 
   async loadNotificationSettings() {
@@ -443,27 +449,26 @@ class FCMNotificationManager {
 
   updateUIVisibility(isSubscribed) {
     const browserPermission = Notification.permission;
-
-    if (this.timeSettingDiv) {
-      this.timeSettingDiv.style.display = isSubscribed ? "flex" : "none";
+    if (this.alwaysShowControls) {
+      if (this.timeSettingDiv) this.timeSettingDiv.style.display = "flex";
+      if (this.testBtn) this.testBtn.style.display = "block";
+      if (this.saveBtn) this.saveBtn.style.display = "block";
+      if (this.permissionBtn) {
+        // Still show permission button only if needed
+        this.permissionBtn.style.display =
+          browserPermission !== "granted" ? "block" : "none";
+      }
+      if (this.toggle && browserPermission === "denied") {
+        this.toggle.style.display = "none";
+      }
+      return;
     }
-    if (this.testBtn) {
-      this.testBtn.style.display = isSubscribed ? "block" : "none";
-    }
-    if (this.saveBtn) {
-      this.saveBtn.style.display = "none"; // Initially hidden, shown when time changes
-    }
-
-    // Show permission button if not subscribed and permission is not granted
-    if (this.permissionBtn) {
-      this.permissionBtn.style.display =
-        !isSubscribed && browserPermission !== "granted" ? "block" : "none";
-    }
-
-    // Hide toggle if permission is denied
-    if (this.toggle && browserPermission === "denied") {
-      this.toggle.style.display = "none";
-    }
+    // Fallback legacy path
+    if (this.timeSettingDiv) this.timeSettingDiv.style.display = isSubscribed ? "flex" : "none";
+    if (this.testBtn) this.testBtn.style.display = isSubscribed ? "block" : "none";
+    if (this.saveBtn) this.saveBtn.style.display = "none";
+    if (this.permissionBtn) this.permissionBtn.style.display = !isSubscribed && browserPermission !== 'granted' ? 'block' : 'none';
+    if (this.toggle && browserPermission === 'denied') this.toggle.style.display = 'none';
   }
 
   showStatus(message, type = "success") {
