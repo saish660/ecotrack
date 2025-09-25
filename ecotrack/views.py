@@ -388,19 +388,23 @@ from datetime import datetime, time
 @require_GET
 @csrf_exempt  # This is a server-to-server endpoint; we'll protect with a secret instead of CSRF
 def cron_dispatch(request):
-    # Simple bearer-like secret check: /api/cron/dispatch?token=... or Authorization: Bearer ...
+    """Unified cron dispatcher: sends scheduled notifications via OneSignal only.
+
+    For every active PushSubscription scheduled at the current minute and not already
+    sent today at this exact minute, we send a single generated reminder notification.
+    Only subscriptions with a valid OneSignal player ID are included.
+    (Web users without player IDs will be skipped until OneSignal Web SDK integration.)
+    """
     token = request.GET.get('token') or request.headers.get('Authorization', '').replace('Bearer ', '').strip()
     expected = getattr(settings, 'CRON_SECRET', '')
     if not expected or token != expected:
         return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=401)
 
-    # Use Django timezone utilities so we honor settings.TIME_ZONE
     from django.utils import timezone
     now = timezone.localtime(timezone.now())
     current_time = time(hour=now.hour, minute=now.minute)
     today = now.date()
 
-    # Pick subscriptions scheduled for this minute, active, and not already sent for this exact minute today
     qs = PushSubscription.objects.filter(
         is_active=True,
         notification_time__hour=current_time.hour,
@@ -410,79 +414,59 @@ def cron_dispatch(request):
         last_sent_time=current_time,
     )
 
-    total = qs.count()
-    sent = 0
-    failed = 0
-    failed_ids = []
+    total_candidates = qs.count()
 
-    # Batch by device type/token validity, prefer multicast for efficiency
-    tokens = []
-    subs_by_token = {}
+    # Collect OneSignal player IDs
+    subs_with_ids = []
+    player_ids = []
+    skipped_no_player = []
     for sub in qs:
-        if sub.has_valid_fcm_token():
-            token = sub.get_fcm_token()
-            tokens.append(token)
-            subs_by_token[token] = sub
+        pid = sub.get_onesignal_player_id()
+        if pid:
+            player_ids.append(pid)
+            subs_with_ids.append(sub)
         else:
-            failed += 1
-            failed_ids.append(sub.id)
-            
-            
+            skipped_no_player.append(sub.id)
+
+    # Generate message (single for all)
     client = genai.Client()
-
-    prompt = f"""
-                Generate 1 single short, catchy, and engaging notification message strictly to encourage users to fill out the EcoTrack check-in form.
-                EcoTrack is an app that helps users track their sustainability habits and promotes eco-friendly behavior. It includes features like:
-                - Daily surveys to track eco actions 🌱
-                - Personalized sustainability score 📊
-                - AI chatbot to guide users 🤖
-                - Personalized suggestions for greener living 💡
-                - Achievements for completing surveys and taking eco-friendly actions 🎁
-                - Daily streaks kept alive by submitting check-in everyday
-                 Ensure the notifications are:
-                - under 60 characters
-                - Friendly, heartwarming, motivating, and aligned with EcoTrack's eco-conscious mission
-                - Include clear call-to-actions like "Share your thoughts", "fill now", "complete now"
-                - Include relevant emojis for engagement
-                - Highlight rewards or benefits if possible
-                Give the message a human touch, with some warmth, inviting gesture and showing that you care for the user.
-            """
-
+    prompt = (
+        "Generate 1 single short (<60 chars), catchy, warm daily reminder to complete the EcoTrack check-in. "
+        "Include an eco / positive emoji. Friendly CTA (e.g., 'log now', 'share today')."
+    )
     try:
-        response = client.models.generate_content(
+        body = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=prompt,
-        ).text
-    except:
-        response = f"Hey user!, time to track your footprints 🌱"
+        ).text.strip()
+    except Exception:
+        body = "EcoTrack check-in time 🌱 Log today!"
+    title = "EcoTrack Reminder"
 
-    title = 'EcoTrack Reminder'
-    body = response
-
-    if tokens:
-        # Send per token to avoid environments where FCM batch (/batch) is blocked or returns 404
-        for t in tokens:
-            ok = FCMService.send_notification(t, title, body, data={'type': 'daily_reminder'})
-            sub = subs_by_token.get(t)
-            if ok:
-                sent += 1
-                if sub:
-                    sub.last_sent_date = today
-                    sub.last_sent_time = current_time
-                    sub.save(update_fields=['last_sent_date', 'last_sent_time', 'updated_at'])
-            else:
-                failed += 1
-                if sub:
-                    failed_ids.append(sub.id)
+    send_result = {'success_count': 0, 'failure_count': 0, 'failed_ids': []}
+    if player_ids:
+        send_result = OneSignalService.send_bulk(player_ids, title, body, data={'type': 'daily_reminder'})
+        # Mark sent for successful recipients (assume all success if success_count > 0 and failure_count == 0)
+        if send_result.get('failure_count') == 0:
+            for sub in subs_with_ids:
+                sub.last_sent_date = today
+                sub.last_sent_time = current_time
+                sub.save(update_fields=['last_sent_date', 'last_sent_time', 'updated_at'])
+        else:
+            # Partial failures: we cannot map which failed (OneSignal doesn't give per-ID) – mark all as sent only if fully successful
+            pass
 
     return JsonResponse({
         'status': 'success',
         'time': current_time.strftime('%H:%M'),
         'date': today.isoformat(),
-        'total_candidates': total,
-        'sent': sent,
-        'failed': failed,
-        'failed_ids': failed_ids,
+        'total_candidates': total_candidates,
+        'with_player_ids': len(player_ids),
+        'skipped_missing_player_id': skipped_no_player,
+        'sent_success': send_result.get('success_count'),
+        'send_failures': send_result.get('failure_count'),
+        'failed_ids': send_result.get('failed_ids'),
+        'message_preview': body[:120],
     })
 
 
