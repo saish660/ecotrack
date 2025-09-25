@@ -495,10 +495,19 @@ class FCMNotificationManager {
   }
 }
 
-// Initialize the notification manager when the DOM is loaded
-document.addEventListener("DOMContentLoaded", () => {
-  window.notificationManager = new FCMNotificationManager();
-});
+// Initialize the notification manager (handle case where script is loaded after DOMContentLoaded already fired)
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => {
+    if (!window.notificationManager) {
+      window.notificationManager = new FCMNotificationManager();
+    }
+  });
+} else {
+  // DOM already parsed
+  if (!window.notificationManager) {
+    window.notificationManager = new FCMNotificationManager();
+  }
+}
 
 // Add CSS for foreground notifications
 const style = document.createElement("style");

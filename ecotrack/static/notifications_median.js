@@ -414,12 +414,23 @@ function median_library_ready() {
   }
 }
 
-// Initialize when DOM is ready
-document.addEventListener("DOMContentLoaded", () => {
-  window.medianNotificationManager = new MedianNotificationManager();
-});
+// Initialize when DOM is ready (also if already loaded at dynamic import time)
+function __initMedianNotifications() {
+  if (!window.medianNotificationManager) {
+    window.medianNotificationManager = new MedianNotificationManager();
+    // If median bridge already present, trigger ready hook
+    if (window.median && typeof window.median_library_ready === "function") {
+      try {
+        window.median_library_ready();
+      } catch (e) {
+        console.warn("Median library ready handler error", e);
+      }
+    }
+  }
+}
 
-// Manual trigger for median_library_ready if the bridge is already available
-if (window.median) {
-  window.median_library_ready();
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", __initMedianNotifications);
+} else {
+  __initMedianNotifications();
 }
