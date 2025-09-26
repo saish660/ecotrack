@@ -11,15 +11,6 @@
     const hasMedianAgent =
       userAgent.includes("median") || userAgent.includes("gonative");
 
-    var osSubscriptionId = "the OneSignal Subscription ID string";
-    var isSubscribedToPushNotifications;
-
-    median.onesignal.onesignalInfo().then(function (oneSignalInfo) {
-      console.log(oneSignalInfo);
-      osSubscriptionId = oneSignalInfo.oneSignalUserId;
-      isSubscribedToPushNotifications = oneSignalInfo.oneSignalSubscribed;
-    });
-
     return {
       isMedian: hasMedian || hasMedianAgent,
       isWeb: !hasMedian && !hasMedianAgent,

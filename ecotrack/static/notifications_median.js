@@ -108,11 +108,30 @@ class MedianNotificationManager {
   async getOneSignalInfo() {
     return new Promise((resolve, reject) => {
       try {
-        // Method 1: Try promise-based approach
+        // Prefer Median bridge method: onesignal.onesignalInfo() -> Promise
         if (
           window.median &&
           window.median.onesignal &&
-          window.median.onesignal.info
+          typeof window.median.onesignal.onesignalInfo === "function"
+        ) {
+          window.median.onesignal
+            .onesignalInfo()
+            .then((oneSignalInfo) => {
+              this.handleOneSignalInfo(oneSignalInfo);
+              resolve();
+            })
+            .catch((err) => {
+              console.error("median.onesignal.onesignalInfo() failed", err);
+              reject(err);
+            });
+          return;
+        }
+
+        // Backward-compat: some builds expose .info() returning a Promise
+        if (
+          window.median &&
+          window.median.onesignal &&
+          typeof window.median.onesignal.info === "function"
         ) {
           window.median.onesignal
             .info()
@@ -120,28 +139,15 @@ class MedianNotificationManager {
               this.handleOneSignalInfo(oneSignalInfo);
               resolve();
             })
-            .catch(reject);
-        } else {
-          // Method 2: Try callback approach
-          window.median_onesignal_info = (oneSignalInfo) => {
-            this.handleOneSignalInfo(oneSignalInfo);
-            resolve();
-          };
-
-          // Trigger manual call if available
-          if (
-            window.median &&
-            window.median.onesignal &&
-            window.median.onesignal.info
-          ) {
-            window.median.onesignal.info({ callback: "median_onesignal_info" });
-          } else {
-            setTimeout(
-              () => reject(new Error("OneSignal info not available")),
-              3000
-            );
-          }
+            .catch((err) => {
+              console.error("median.onesignal.info() failed", err);
+              reject(err);
+            });
+          return;
         }
+
+        // No suitable API found
+        reject(new Error("Median OneSignal bridge not available"));
       } catch (error) {
         reject(error);
       }
@@ -151,16 +157,23 @@ class MedianNotificationManager {
   handleOneSignalInfo(oneSignalInfo) {
     console.log("OneSignal Info:", oneSignalInfo);
 
+    // Median docs: onesignalInfo() returns { oneSignalUserId, oneSignalSubscribed, ... }
+    if (oneSignalInfo && oneSignalInfo.oneSignalUserId) {
+      this.oneSignalPlayerId = oneSignalInfo.oneSignalUserId;
+      console.log("OneSignal Player ID:", this.oneSignalPlayerId);
+      return;
+    }
+
+    // Fallbacks for alternate shapes
     if (oneSignalInfo && oneSignalInfo.oneSignalId) {
       this.oneSignalPlayerId = oneSignalInfo.oneSignalId;
-      console.log("OneSignal Player ID:", this.oneSignalPlayerId);
-    } else if (
-      oneSignalInfo &&
-      oneSignalInfo.subscription &&
-      oneSignalInfo.subscription.id
-    ) {
+      console.log("OneSignal Player ID (oneSignalId):", this.oneSignalPlayerId);
+      return;
+    }
+    if (oneSignalInfo && oneSignalInfo.subscription && oneSignalInfo.subscription.id) {
       this.oneSignalPlayerId = oneSignalInfo.subscription.id;
-      console.log("OneSignal Player ID (v5):", this.oneSignalPlayerId);
+      console.log("OneSignal Player ID (subscription.id):", this.oneSignalPlayerId);
+      return;
     }
   }
 
