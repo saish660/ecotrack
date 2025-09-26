@@ -444,6 +444,7 @@ def cron_dispatch(request):
     title = "EcoTrack Reminder"
 
     send_result = {'success_count': 0, 'failure_count': 0, 'failed_ids': []}
+    print(send_result)
     if player_ids:
         send_result = OneSignalService.send_bulk(player_ids, title, body, data={'type': 'daily_reminder'})
         # Mark sent for successful recipients (assume all success if success_count > 0 and failure_count == 0)

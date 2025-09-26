@@ -37,7 +37,9 @@
 
     try {
       if (platform.isMedian) {
-        console.log("Loading Median OneSignal notification system (non-module)...");
+        console.log(
+          "Loading Median OneSignal notification system (non-module)..."
+        );
         await loadScript("/static/notifications_median.js", false);
       } else {
         console.log("Loading web FCM notification system (ES module)...");
