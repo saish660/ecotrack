@@ -5,6 +5,7 @@ class MedianNotificationManager {
   constructor() {
     this.isMedianApp = this.detectMedianApp();
     this.oneSignalPlayerId = null;
+    this.isNativeSubscribed = false; // Track native OneSignal subscription state
     this.alwaysShowControls = true;
 
     // UI elements
@@ -73,7 +74,30 @@ class MedianNotificationManager {
     // Get OneSignal info
     try {
       await this.getOneSignalInfo();
-      this.showStatus("Native notifications are ready!", "success");
+
+      // If not ready, start polling for up to 30s
+      if (!this.oneSignalPlayerId || !this.isNativeSubscribed) {
+        this.showStatus(
+          "Waiting for device push registration… If this persists, clear Play Services data or reinstall.",
+          "warning"
+        );
+        await this.pollOneSignalInfoUntilReady(30000, 2000);
+      }
+
+      if (this.oneSignalPlayerId && this.isNativeSubscribed) {
+        this.showStatus("Native notifications are ready!", "success");
+      } else if (this.oneSignalPlayerId && !this.isNativeSubscribed) {
+        this.showStatus(
+          "Device push not subscribed yet. Ensure notifications are enabled in Android settings.",
+          "warning"
+        );
+      } else {
+        this.showStatus(
+          "No OneSignal player ID yet. Fix device push (FCM) to receive notifications.",
+          "error"
+        );
+      }
+
       this.updateUIVisibility(true);
     } catch (error) {
       console.error("Failed to setup OneSignal:", error);
@@ -108,12 +132,13 @@ class MedianNotificationManager {
   async getOneSignalInfo() {
     return new Promise((resolve, reject) => {
       try {
-        // Prefer Median bridge method: onesignal.onesignalInfo() -> Promise
+        // Method 1: Try onesignalInfo() -> Promise (recommended Median bridge API)
         if (
           window.median &&
           window.median.onesignal &&
           typeof window.median.onesignal.onesignalInfo === "function"
         ) {
+          console.log("Using median.onesignal.onesignalInfo()");
           window.median.onesignal
             .onesignalInfo()
             .then((oneSignalInfo) => {
@@ -127,28 +152,59 @@ class MedianNotificationManager {
           return;
         }
 
-        // Backward-compat: some builds expose .info() returning a Promise
+        // Method 2: Try direct synchronous access
+        if (window.median && window.median.onesignal && window.median.onesignal.onesignalUserId) {
+          console.log("Using direct median.onesignal properties");
+          const oneSignalInfo = {
+            oneSignalUserId: window.median.onesignal.onesignalUserId,
+            oneSignalSubscribed: window.median.onesignal.onesignalSubscribed || false
+          };
+          this.handleOneSignalInfo(oneSignalInfo);
+          resolve();
+          return;
+        }
+
+        // Method 3: Try callback-based approach
         if (
           window.median &&
           window.median.onesignal &&
           typeof window.median.onesignal.info === "function"
         ) {
-          window.median.onesignal
-            .info()
-            .then((oneSignalInfo) => {
-              this.handleOneSignalInfo(oneSignalInfo);
-              resolve();
-            })
-            .catch((err) => {
-              console.error("median.onesignal.info() failed", err);
-              reject(err);
-            });
+          console.log("Using median.onesignal.info() with callback");
+          
+          // Set up global callback
+          window.median_onesignal_info = (oneSignalInfo) => {
+            this.handleOneSignalInfo(oneSignalInfo);
+            resolve();
+          };
+
+          // Try promise-based first
+          const result = window.median.onesignal.info();
+          if (result && typeof result.then === 'function') {
+            result
+              .then((oneSignalInfo) => {
+                this.handleOneSignalInfo(oneSignalInfo);
+                resolve();
+              })
+              .catch((err) => {
+                console.error("median.onesignal.info() promise failed", err);
+                // Fallback to callback approach
+                window.median.onesignal.info({ callback: "median_onesignal_info" });
+                setTimeout(() => reject(new Error("OneSignal info callback timeout")), 5000);
+              });
+          } else {
+            // Direct callback approach
+            window.median.onesignal.info({ callback: "median_onesignal_info" });
+            setTimeout(() => reject(new Error("OneSignal info callback timeout")), 5000);
+          }
           return;
         }
 
         // No suitable API found
+        console.error("No Median OneSignal bridge methods available");
         reject(new Error("Median OneSignal bridge not available"));
       } catch (error) {
+        console.error("Exception in getOneSignalInfo:", error);
         reject(error);
       }
     });
@@ -156,6 +212,12 @@ class MedianNotificationManager {
 
   handleOneSignalInfo(oneSignalInfo) {
     console.log("OneSignal Info:", oneSignalInfo);
+
+    // Track native subscribed flag (if provided)
+    if (oneSignalInfo && typeof oneSignalInfo.oneSignalSubscribed === "boolean") {
+      this.isNativeSubscribed = oneSignalInfo.oneSignalSubscribed;
+      console.log("OneSignal Subscribed:", this.isNativeSubscribed);
+    }
 
     // Median docs: onesignalInfo() returns { oneSignalUserId, oneSignalSubscribed, ... }
     if (oneSignalInfo && oneSignalInfo.oneSignalUserId) {
@@ -170,9 +232,16 @@ class MedianNotificationManager {
       console.log("OneSignal Player ID (oneSignalId):", this.oneSignalPlayerId);
       return;
     }
-    if (oneSignalInfo && oneSignalInfo.subscription && oneSignalInfo.subscription.id) {
+    if (
+      oneSignalInfo &&
+      oneSignalInfo.subscription &&
+      oneSignalInfo.subscription.id
+    ) {
       this.oneSignalPlayerId = oneSignalInfo.subscription.id;
-      console.log("OneSignal Player ID (subscription.id):", this.oneSignalPlayerId);
+      console.log(
+        "OneSignal Player ID (subscription.id):",
+        this.oneSignalPlayerId
+      );
       return;
     }
   }
@@ -321,6 +390,30 @@ class MedianNotificationManager {
     }
   }
 
+  async pollOneSignalInfoUntilReady(timeoutMs = 30000, intervalMs = 2000) {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      try {
+        await this.getOneSignalInfo();
+        if (this.oneSignalPlayerId) {
+          // Update status each loop to reflect native subscribe state
+          if (this.isNativeSubscribed) {
+            this.showStatus("Native notifications are ready!", "success");
+          } else {
+            this.showStatus(
+              "Device push not subscribed yet. Waiting for OneSignal/FCM…",
+              "warning"
+            );
+          }
+          if (this.isNativeSubscribed) return;
+        }
+      } catch (_) {
+        // ignore and retry
+      }
+      await new Promise((r) => setTimeout(r, intervalMs));
+    }
+  }
+
   async sendTestNotification() {
     if (!this.oneSignalPlayerId) {
       this.showStatus(
@@ -328,6 +421,12 @@ class MedianNotificationManager {
         "error"
       );
       return;
+    }
+    if (!this.isNativeSubscribed) {
+      this.showStatus(
+        "Device is not fully subscribed to push yet. Test may not arrive.",
+        "warning"
+      );
     }
 
     try {
