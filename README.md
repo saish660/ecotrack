@@ -12,8 +12,9 @@
 
 
 
-### The webapp is available online at: [EcoTrack](https://saishgawade.pythonanywhere.com)
-### Note that the online version currently does not support push notifications.
+#### The webapp is available online at: [EcoTrack](https://saishgawade.pythonanywhere.com)
+#### Note that the online version currently does not support push notifications.
 
+### For best experience, download the android app: [drive.google.com](https://drive.google.com/file/d/1CjH6gIoS-mjCkFnBNBXZeCN4Kr5UqQE9/view?usp=drivesdk)
 
 ##### Due to high demand of the Gemini API we use, AI features might not work as expected later in the day.
